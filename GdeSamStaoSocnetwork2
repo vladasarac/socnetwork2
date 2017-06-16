@@ -1,0 +1,2078 @@
+YT tutorial Laravel 5.3 Vue.js 2 Socialnetwork
+
+Vazno Vazno Vazno !!!
+Posto Mi Je U Socnetwork.Dev Instalirao Vue.Js Umesto Vuejs2 Morao Sam Da Napravim Novu Instalaciju Laravela Socnetwork2.Dev I Sada Red-
+-Om U Njoj Radim Isto Ono Sto I U Socnetwork.Dev, Za Prvih 14-15 Lekcija Iako Pise Da Je Folder Socnetwork Ustvari Se Odnosi Na Folder-
+-Socnetwork2 Odnosno Na Novu Instalaciju Laravela Koja Ima V-Host Socnetwork2.Dev, Takodje Samo Napravio I Novu Bazu Socnetwork2
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 1 - Social network in Laravel 5.3 and Vuejs 2.0 #1 - Customizing Default authentication
+Link - https://www.youtube.com/watch?v=zXtgFR0OdxU&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=1
+Napravio sam novu instalaciju Laravela 5.3 komandom "composer create-project --prefer-dist laravel/laravel socnetwork2 5.3.*", napravio-
+-virtual host (socnetwork.dev) i otkljucao storage i bootstrap foldere, napravio bazu socnetwork i podesio .env fajl
+Sada cemo napraviti autentifikaciju komandom "php artisan make:auth", u migraciji za 'users' tabelu dodajemo kolone avatar i slug-
+- i polje gender(bool 1 -male, 0- female), posto smo dodali ova polja sada moramo u kontoleru za registraciju tj u -
+-RegisterController.php iz 'socnetwork/app/Http/Controllers/Auth' da u metodu validator() dodamo da ime mora biti unique posto cemo -
+-ga koristiti da pravimo slug takodje dodajemo da validira gender dqa je obavezan i boolean, u create() metodu dodajemo da proverava-
+-da li je u $data['gender'] 1 ili 0 ako je 1 onda je muskarac registrovan i $vatar = male.png ako je 0 onda se registrovala zena i av-
+-atar je female.png u User::create() dodajemo da popunjava slug i avatar kolone u 'users' tabeli pogledaj fajl zakomentarisano je...
+U folderu 'socnetwork/storage/app/public' pravimo folder defaults i u njemu folder avatars u koji cu ubaciti slike siluete muskarca i -
+- zene koje ce biti korisceni kao difolt male/female avatari, u register.blade.php iz 'socnetwork/resources/views/auth' dodajemo u for-
+-mu za registraciju polje tj select u kom user koji se registruje bira da li je Male ili Female (1 ili 0) 
+Komandom "php artisan migrate" migriramo tabele za register tj 'users' i 'password_resets' a da bi registracija radila moramo u User.p-
+-hp modelu u $fillable dodati i kolone avatar, slug i gender koje smo dodali u migraciju za 'users' tabelu
+protected $fillable = ['name', 'email', 'password', 'slug', 'gender', 'avatar'];
+Registrujem usera (Male, Lacpa Racku, lacparacku@yahoo.com, pikolo)
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 2 - Social network in Laravel 5.3 and Vuejs 2.0 #2 - Create user profile page
+Link - https://www.youtube.com/watch?v=ZqrlNub7_z0&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=2
+U folderu 'socnetwork/resources/views' pravim folder 'profiles' i u njemu vju profile.blade.php, takodje pravimo ProfilesController -
+-komandom "php artisan make:controller ProfilesController" i u njemu pravimo index() metod koji za sada vraca vju profile.blade.php -
+-koji smo malopre napravili, pravimo u web.php grupu koja primenjuje auth middleware i u njoj rutu /profile/{slug} koja ide na metod-
+-index() ProfilesControllera
+Route::group(['middleware' => 'auth'], function(){
+  //ruta ide na index() metod ProfilesControllera
+  Route::get('/profile/{slug}', [
+    'uses' => 'ProfilesController@index',
+    'as' => 'profile'	
+  ]);
+});
+Dodajemo u index() metod ProfilesControllera da po slugu koji stigne vadi usera iz 'users' tabele i salje ga u vju profile.blade.php
+Takodje obavezno uvest User.php model u ProfilesController - use App\User;
+//metod vraca vju profiles.blade.php iz 'socnetwork/resources/views/profiles'
+public function index($slug){
+  //izvuci usera iz 'users' tabele po slugu koji je stigao 
+  $user = User::where('slug', $slug)->first();
+  return view('profiles.profile')->withUser($user);
+}
+Dodajemo u layoutu app.blade.php da u navigaciji levo prikazuje(ako je user ulogovan)link ka ruti 'profile/slug' da bi user mogao da
+-poseti svoj profil
+{{-- ako je user ulogovan --}}
+@if(Auth::check())
+  {{-- link ka ruti 'profile/{slug}' koja ide na index() metod ProfilesControllera i prikazuje userov slug --}}
+  <li><a href="{{ route('profile', ['slug' => Auth::user()->slug]) }}">My Profile</a></li>
+@endif
+Sada u profile.blade.php u div .panel-body dodajemo da prikaze sliku usera 
+ <img src="{{ Storage::url($user->avatar) }}" width="70px" height="70px" style="border-radius: 50%;">
+ali da bi ovo radilo moramo da damo komandu u terminalu "php artisan storage:link" to ima neke veze sa storage folderom i ovim metodom-
+-Storage::url() koji ovde koristimo, nije mi jasno zasto ovako radi...Zapravo sada smo u folderu 'socnetwork/public' napravili link -
+-ka folderu 'socnetwork/storage' tako da u 'socnetwork/public' ima shortcut ka storage BZVZ...
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 3 - Social network in Laravel 5.3 and Vuejs 2.0 #3 - Profiles table and model
+Link - https://www.youtube.com/watch?v=2HczWG5LhgY&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=3
+Sada cemo napraviti model i migraciju za tabelu 'profiles' u koju ce se upisivati dodatni podatci usera tipa adresa, gde radi i slicno-
+-komandom "php artisan make:model Profile -m", u migraciju dodajemo kolone user_id, location i about, u Profile.php modelu upisujemo -
+-u array $fillable da se mogu popunjavati user_id, locatio i about kolone i pravimo relaciju sa 'users' tabelom
+protected $fillable = ['locaton', 'about', 'user_id'];
+//povezujemo 'users' i 'profiles' tabele one-to-one relacijom
+public function user(){
+  return $this->belongsTo('App\User');
+}
+U User.php model pravimo one-to-one relaciju sa 'profiles' tabelom posto jedan user moze imati jedan profil
+public function profle(){
+  return $this->hasOne('App\Profile');  
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 4 - Social network in Laravel 5.3 and Vuejs 2.0 #4 - One to one relationship with profile table
+Link - https://www.youtube.com/watch?v=r_mst1VU2Yw&index=4&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+Sada malo menjamo create() metod u RegisterControlleru da kad napravi usera napravi i novi red u 'profiles' tabeli i popuni samo kolonu-
+-user_id id-em usera kog smo upravo kreirali ovo dodajemo ispod kreiranja usera u create() metodu
+Profile::create(['user_id' => $user->id]);
+return $user;
+Takodje na vrhu klase uvozimo Profile.php model da bi ovo moglo da radi - use App\Profile;
+Posto smo dodali novu migraciju i treba opet kreirati usera radimo refresh baze komandom "php artisan migrate:refresh" i opet pravimo-
+-novog usera (Male, Lacpa Racku, lacparacku@yahoo.com, pikolo) i ovog puta osim reda koji upisuje u 'users' tabelu upisuje i red u tab-
+-elu 'profiles' i za sada su popunjene kolone id i user_id(id-em Lacpa Rackua iz 'users' tabele)
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 5 - Social network in Laravel 5.3 and Vuejs 2.0 #5 - Updating user's profile
+Link - https://www.youtube.com/watch?v=U-vYLlUXwEU&index=5&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+U profile.blade.php pravimo link ka profile.edit ruti
+{{--btn link ka ruti profile.edit tj na edit() metod ProfilesControllera, vidljiv samo ako je id trenutno ulogovanog usera jednak -
+ - id usera ciji je profil prikazan--}}
+<p class="text-center">
+  @if(Auth::id() == $user->id)
+    <a href="{{ route('profile.edit') }}" class="btn btn-lg btn-info">Edit Your Profile</a>
+  @endif
+</p>
+U web.php u auth middleware grupi pravimo rutu
+//ruta ide na edit() metod ProfilesControllera
+Route::get('/profile/edit', [
+  'uses' => 'ProfilesController@edit',
+  'as' => 'profile.edit'	
+]);
+U ProfilesControlleru pravimo metod edit(), moramo napisati na vrhu klase use Auth; da bi radilo
+//metod se poziva kad se u profile.blade.php klikne link Edit Your Profile koji preko rute ide na ovaj metod i iz btabele 'profiles' -
+//-vadi podatke trenutno ulogovanog usera i salje ih u vju edit.blade.php 
+public function edit(){
+  retrn view('profiles.edit')->with('info', Auth::user()->profile);
+}
+U folderu 'socnetwork/resources/views/profiles' pravimo vju edit.blade.php i u njemu formu koja ce ako je nesto upisano u 'profiles'-
+-tabelu to prikazati a ako nije prikazace samo polja, postoji polje za nos adrese i textarea za unos podataka o useru(about), kad se -
+-forma sabmituje ide na rutu profile.update tj na update() metod ProfilesControllera (pogledaj vju zakomentarisano je)
+Pravimo rutu u web.php
+//kad se sabmituje forma u edit.blade.php iz 'socnetwork/resources/views/profiles' za popunjavanje 'profiles' tabele podatcima o useru
+//ide na update() metod ProfilesControllera
+Route::post('/profile/update/profile', [
+  'uses' => 'ProfilesController@update',
+  'as' => 'profile.update'	
+]);
+Vazno Vazno Vazno
+takodje posto je get rutu 'profile/edit' aplikacija mesala sa rutom 'profile/{slug}' preimenovali smo je u 'profile/edit/profile'
+Na vrhu ProfilesControllera uvozimo klasu Session - use Session; i pravimo update() metod koji ce upisivati tj updateovati podatke u -
+-'profiles' tabeli (posto je red koji pripada useru napravljen cim se on registruje samo sto su about i location kolone ostale NULL)
+//metod se poziva kad se sabmituje forma u edit.blade.php iz'socnetwork/resources/views/profiles' za popunjavanje 'profiles' tabele -
+//-podatcima o useru, dolazi preko post rute 'profile.update'
+public function update(Request $request){
+  //dd($request->all());
+  //validacija
+  $this->validate($request, [
+    'location' => 'required',
+    'about' => 'required|max:255'	
+  ]);
+  //preko Auth::user tj usera koji je ulogovan idemo na metod profile() User.php modela i updateujemo 'profiles' tabelu gde je -
+  //user_id kolona jednaka id-u trenutno ulogovanog usera
+  Auth::user()->profile()->update([
+    'location' => $request->location,
+    'about' => $request->about	
+  ]);
+  Session::flash('success', 'Profile Updated.');
+  return redirect()->back();
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 6 - Social network in Laravel 5.3 and Vuejs 2.0 #6 Updating user's avatar
+Link - https://www.youtube.com/watch?v=Sdj9lvihyWY&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=6
+Sada cemo u edit.blade.php dati mogucnost useru da uploaduje sliku posto je do sada imao samo difolt avatar, prvom menjamo otvaranje fo-
+-rme tj dodajemo enctype="multipart/form-data", u formi dodajemo polje za upload fajla tj slike
+<div class="form-group">
+  <label for="avatar">Upload Avatar</label>
+  {{--polje za unos slike tj avatara--}}
+  <input type="file" name="avatar" class="form-control" accept="image/*">    
+</div>
+U folderu 'socnetwork2/storage/app/public' pravimo folder 'avatars' u koji ce useri uploadovati svoje slike
+U update() metod ProfilesControllera ubacujemo da proverava da li je user uploadovao sliku i ako jeste da je uploaduje u folder -
+-'socnetwork2/storage/app/public/avatars' i onda tu putanju i ime slike da upise u avatar kolonu 'users' tabele takodje moramo 'avatars'
+-folderu promeniti permissions da bi mogao da primi fajl
+//ako je user u formi u edit.blade.php uploadovao sliku
+if($request->hasFile('avatar')){
+//u kolonu avatar 'users' tabele upisacemo ono sto vrati Laravelov store() metod koji ce upisati sliku u folder -
+//-'socnetwork/storage/app/public', a ako sam dobro shvatio metod ce vratiti putanju do fajla sa imenom fajla na kraju
+    Auth::user()->update([
+      'avatar' => $request->avatar->store('public/avatars')
+    ]);
+}
+dodao sam u ovom if-u za upload da prvo proveri da li user ima uploadovanu svoju sliku tj da ne koristi male.png ili female.png i onda-
+-prvo obrisemo staru sliku pa tek onda dodajemo novu sliku
+$user = Auth::user();
+if($user->avatar != 'public/defaults/avatars/female.png' && $user->avatar != 'public/defaults/avatars/male.png'){
+  Storage::delete($user->avatar);
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 7 - Social network in Laravel 5.3 and Vuejs 2.0 #7 Displaying user's profile info
+Link - https://www.youtube.com/watch?v=Xcvatiw_WbY&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=7
+Dodajemo u vju profile.blade.php da prikazuje location i about kolone 'profiles' tabele 
+<p class="text-center">
+  {{-- prikazi about kolonu 'profiles' tabele preko profile() metoda User.php modela --}}
+  {{ $user->profile->about }}
+</p>
+i
+<p class="text-center">
+  {{ $user->profile->location }}
+</p>
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 8 - Social network in Laravel 5.3 and Vuejs 2.0 #8 - Using noty nitifications in laravel
+Link - https://www.youtube.com/watch?v=zcbijWbVe9Q&index=8&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+Prvo smo kucali komandu "npm install noty" onda "npm install" onda "npm install gulp" zatim u fajlu gulpfile.js pisemo 
+elixir(mix => {
+    mix.webpack('app.js');
+});
+zatim u bootstrap.js na liniji 12 pisemo - require('noty'); i sada je on da bi ovo kompajlirao u fajl app.js iz 'socnetwork/public/js'
+-kucao komandu "gulp" ali meni nije radilo pa sam kucao "npm run dev" i onda mi je iskompajlirao 
+Sada na dnu app.blade.php layouta dodajemo <script> tag u kom cemo ako u Session postoji 'success' a postoji ako smo recimo uspesno -
+-updateovali userov profil to i prikazati koristeci noty paket koji smo upravo instalirali
+<script>
+  @if(Session::has('success'))
+    noty({
+      type: 'success',
+      layout: 'bottomLeft',
+      text: '{{ Session::get('success') }}'  
+    })
+  @endif  
+</script>
+i sada kad update() metod ProfilesControllera ubaci u Session success message ovo sranje ce to prikazati u donjem levom uglu ekrana
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 9 - Social network in Laravel 5.3 and Vuejs 2.0 #9 - Creating friends table and model, with trait
+Link - https://www.youtube.com/watch?v=VzUed148rF0&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=9
+Pravimo Friendship.php model za rad sa 'friendships' tabelom komandom "php artisan make:model Friendship -m" u toj tabeli cemo ako sam
+-dobro shvatio upisivati koji user je projatelj sa kojim userom
+U migraciju za 'friendships' tabelu dodajemo kolone requester, user_requested i status
+$table->integer('requester'); //id korisnika koji nekome drugom korisniku saalje zahtev za prijateljstvo
+$table->integer('user_requested');//id korisnika kom je zahtev za prijateljstvo upucen
+$table->boolean('status')->default(0);//ako je 1 onda su prijatelji ako je 0 onda nisu
+U Friendship.php modelu pravimo fillable array - protected $fillable = ['requester', 'user_requested', 'status'];
+Da ne bi svi metodi bili u User.php modelu napravicemo trait fajl Friendable.php u folderu 'Traits' koji pravimo u'socnetwork/app'
+-i tu klasu uvozimo u User.php model -   
+use App\Traits\Friendable;
+-i na pocetku klase pisemo
+use Friendable;
+U Friendable.php fajlu za sada samo pravimo metod hello() da isprobamo da li radi, ovako za sada izgleda fajl
+<?php
+namespace App\Traits;
+trait Friendable 
+{
+  //samo proba
+  public function hello(){
+  	return "hello friend";
+  }
+}
+Pravimo rutu '/hello' koja ce pozivati ovaj metod i sada kad ukucamo url - socnetwork.dev/hello ispisace nam 'hello friend'
+Route::get('/hello', function(){
+  return Auth::user()->hello();	
+});
+Ako sam dobro shvatio ovi trait-ovi sluze da bi bilo manje metoda u modelu, takodje vise modela tj klasa moze pozivati metode jednog-
+-traita, npr napravimo u traitu metod koji formatira vreme i taj metod mozemo pozivati kad u kontroleru npr formatiramo vreme i kad-
+-je napravljen npr neki user (u nekom UserControlleru) i u kontroleru za npr postove samo treba da uvezemo tu kladsu tj trait
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 10 - Social network in Laravel 5.3 and Vuejs 2.0 #10 - Adding and accepting friend requests
+Link - https://www.youtube.com/watch?v=tbZRUyz4U6A&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=10
+U Friendable.php traitu pravimo metode kojim neki user moze nekom drugom useru poslati poziv za prijateljstvo(tj upisivanje reda u -
+-tabelu 'friendship' sa id-em usera koji salje poziv i onog kom se salje) i metod kojim ovaj moze taj poziv prihvatiti tj promeniti -
+-kolonu status 'friendships' tabele iz 0 (kako je po difoltu) u 1 
+Na vrhu uvozimo Friendship.php model da bi mogli da pisemo po 'friendshpis' tabeli - use App\Friendship;
+//kad neko nekom posalje zahtev za prijateljstvo poziva se ovaj metod koji u 'friendships' tabelu upisuje novi red tj id onoga ko -
+//-salje request i id onoga kome je request poslat, status kolona je po difoltu 0 i ostace dok ovaj drugi ne prihvati poziv
+public function add_friend($user_requested_id){
+  $friendship = Friendship::create([
+    'requester' => $this->id, // ovo je id usera koji je pozvao ovaj metod tj onog koji salje nekom request za prijateljstvo
+    'user_requested' => $user_requested_id // ovo je id usera kom je poslat request za prijateljstvo	
+  ]);
+  //ako upise u 'friendships' tabelu vrati status 200 i $friendship objekat
+  if($friendship){
+    return response()->json($friendship, 200);	
+  }
+  //ako ne uspe
+  return response()->json('fail', 501);
+}
+
+// metod za prihvatanje necijeg friendship requesta
+public function accept_friend($requester){
+  //izvlacimo red iz 'friendships' tabele gde je requester kolona jednaka id usera koji nam je poslao poziv za prijateljstvo a kolona-
+  //-user_requester je jednaka id - u usera koji poziva ovaj metod tj prihvata prijateljstvo
+  $friendship = Friendship::where('requester', $requester)
+  			    ->where('user_requested', $this->id)
+  		            ->first();
+  //ako postoji takav red menjamo status kolonu iz 0 u 1
+  if($friendship){
+    $friendship->update([
+      'status' => 1
+    ]);	
+    return response()->json('ok', 200);
+  }
+  //ako nismo nasli red u 'friendships' tabeli sa datim id-evima friendship requestera i user_requested-a vrati fail
+  return response()->json('fail', 501);
+}	
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 11 - Social network in Laravel 5.3 and Vuejs 2.0 #11 - Testing add_friend and accept_friend methods
+Link - https://www.youtube.com/watch?v=EOG40gNjWDE&index=11&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+Sada testiramo ovo sto smo napravili, radimo refresh baze "php artisan migrate:refresh", pravimo 5 novih usera, ovaj je koristio fact-
+-ory tj menjao je fajl ModelFactory.php iz 'socnetwork/database/factories' ali meni nije radilo pa sam ih sam napravio, mislim da mi -
+-nije radilo jer kad sam pravio trait Friendable.php imao sam malu gresku u kucanju pa mi ni registracija nije radila pa sam to poprav-
+-io pa sada radi tako da sam dodao 5 novih usera
+Sada pravimo rutu kojom cemo testirati add_friend() metod iz traita Friendable.php
+//ruta za testiranje add_friend() metoda trait-a Friendable.php, metod trazi parametar tj id usera kom saljemo poziv, takodje vadimo i-
+//-prvi id tj prvog usera koji navodno salje poziv za prijateljstvo
+Route::get('/add', function () {
+    return \App\User::first()->add_friend(3);
+});
+Tako da ako sada kucamo url - socnetwork.dev.add pozvacemo add_friend() traita Friendable.php tj user sa id 1 ce useru sa id 3 poslati-
+-poziv za friendsip i to ce biti upisano u 'friendships' tabelu, status ostaje 0 tj nisu prijatelji dok ovaj ne potvrdi pozivajuci met-
+-od accept_friend() koji je takodje u Friendable.php
+pravimo rutu za pozivanje metoda accept_friend() tj sada ce user sa id 3 prihvatiti poziv usera sa id 1 i promeniti status kolonu iz -
+- 0 u 1
+//ruta za testiranje accept_friend() metoda traita Friendable.php, sada user kom je poslat zahtev za prijateljstvo prihvata to i -
+//-menja se status kolona 'friendships' tabele iz 0 u 1
+Route::get('/accept', function () {
+    return \App\User::find(3)->accept_friend(1);
+});
+sada kad odemo na url socnetwork.dev/accept pozvace metod accept_friend traita Friendable.php i promeniti stats kolonu iz 0 u 1 u redu-
+-gde je kolona requester == 1 a kolona user_requested == 3
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 12 - Social network in Laravel 5.3 and Vuejs 2.0 #12 - Get all user's friends 
+Link - https://www.youtube.com/watch?v=Gnfew6f-WU4&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=12
+U traitu Friendable.php pravimo metod friends() koji ce vaditi sve prijatelje usera koji poziva metod
+//metod koji vadi sve prijatelje jednog usera, tj prvo pretrazujemo 'friendships' tabelu po id usera koji poziva metod i requester-
+//-kolonu i user_requested kolonu tj i kad je on bio pozivalac na prijateljstvo i kad su njega pozivali i gde je status kolona 1 tj -
+//-poziv je prihvacen i onda sa tim id-evima pretrazujemo 'users' kolonu i vadimo podatke njegovih prijatelja
+public function friends(){
+  //array u koji ce uci svi useri kojima je user koji poziva metod poslao request za prijateljstvo i koji su ga prihvatili
+  $friends = array();
+  //iz 'friendships' vadimo redove gde je requester kolona==id usera koji poziva metod i gde je status kolona == 1
+  $f1 = Friendship::where('status', 1)
+  		   ->where('requester', $this->id)
+  		   ->get();
+  //iz user tabele, koristeci $f1 u koji smo ubacili usere kojima smo poslali request a oni ga prihvatili, vadimo usere po id koji je-
+  //-upisan u user_requester kolonu 'friendships' tabele i ubacujemo ih u $friends array
+  foreach($f1 as $friendship){
+    array_push($friends, \App\User::find($friendship->user_requested));
+  }
+  //sada obrnuto prethodnom, vadimo redove iz 'friendships' tabele u kojima je user_requester kolona==id usera koji poziva ovaj metod-
+  //-i gde je status kolona ==1 tj poziv je prihvacen tj vadimo one redove gde je nama slat request za friendship a mi prihvatili
+  $friends2 = array();
+  //
+  $f2 = Friendship::where('status', 1)
+  	  	  ->where('user_requested', $this->id)
+  	  	  ->get();
+  //iz user tabele, koristeci $f2 u koji smo ubacili usere koji su nam poslali request a mi ga prihvatili, vadimo usere po id koji je-
+  //-upisan u requester kolonu 'friendships' tabele i ubacujemo ih u $friends2 array
+  foreach($f2 as $friendship){
+    array_push($friends2, \App\User::find($friendship->requester));
+  }
+  //sada od $friends i $friends2 arraya pravimo jedan array, u tom arrayu su svi prijatelji usera koji je pozvao metod, i oni kojima je
+  //-on poslao poziv za prijateljstvo a oni ga prihvatili i oni koji su njemu poslali poziv a on ih prihvatio
+  return array_merge($friends, $friends2);
+}
+Dodajemo koristeci '/add' i '/accept' rute useru sa id jedan nekoliko prijatelja
+Sada testiram tj pravimo rutu koja ce pozivati friends() metod traita Friendable.php i sada kad odemo na socnetwork.dev prikazace nam-
+-sve prijatelje usera sa id 1 ili onog koji mu damo u ruti
+//ruta za testiranje friends() metoda traita Friendable.php koji vadi sve prijatelje usera koji poziva metod u ovom slucaju sa id==1
+Route::get('/friends', function () {
+  return \App\User::find(1)->friends();//vadimo iz users tabele usera sa id 1 i onda pozivamo friends() metod Friendable.php traita
+});
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 13 - Social network in Laravel 5.3 and Vuejs 2.0 #13 - User pending friend requests and is friends with
+Link - https://www.youtube.com/watch?v=vuBgrYzn4DY&index=13&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+U traitu Friendable.php pravimo metod pending_friend_requests() koji ce vaditi sve usere koji u poslali poziv za prijateljstvo useru -
+-koji poziva metod a on jos uvek nije odgovorio tj kolona status je i dalje 0
+//metod koji iz 'users' tabele vadi sve koji su poslali request za prijateljstvo useru koji poziva metod a on ih nije jos prihvatio tj
+//-kolona status 'friendships' tabele je 0 
+public function pending_friend_requests(){
+  //
+  $users = array();
+  //vadimo sve redove 'friendships' tabele u kojoj je status kolona 0 a user_requested tj onaj kom je poslat poziv je jednaka id-u -
+  //usera koji poziva metod
+  $friendships = Friendship::where('status', 0)
+  			   ->where('user_requested', $this->id)
+  			   ->get();
+  //iz 'users' tabele vadimo podatke usera koji su poslali request useru koji je pozvao metod koristecei $friendship array tj kolonu-
+  //-requester 'friendships' tabele u kojoj je id usera koji salje request za prijateljstvo i ubacujemo ih u array $users
+  foreach($friendships as $friendship){
+    array_push($users, \App\Users::find($friendship->requester));
+  }
+  //
+  return $users;
+}
+Sada pravim 2 usera i sa njihovim id pozivam rutu '/add' ka useru sa id 1 da bi user sa id 1 imao dva poziva za prijateljstvo u tabeli-
+-'friendships' na koja i dalje nije odgovorio i pravimo rutu '/pending' koju ce pozivati navodno user sa id 1 da proverimo dali radi
+//ruta za testiranje pending_friend_requests() metoda traita Friendable.php koji vadi usere koji su pozivaoc metoda poslali zahtev
+//- za prijateljstvo a on i dalje nije odgovorio tj kolona status u 'friendships' tabeli je 0
+Route::get('/pending', function () {
+    return \App\User::find(1)->pending_friend_requests();
+});
+Sada kad odemo na socnetwork/pending prikazuje podatke usera koje smo malopre napravili koji su useru sa id 1 poslali poziv a on i dalj
+-e nije prihvaio tj kolona status u 'friendships' tabeli za te pozive je i dalje 0
+Zatim u Friendable.php pravimo metod friends_ids()
+//metod koji vadi samo id-eve(znaci ne sve podatke) prijatelja usera koji poziva ovaj metod, prvo pozivamo metod friends() koji je -
+//-definisan u ovom fajlu iznad koji vadi sve prijatelje usera koji poziva ovaj metod i onda od toga pravi kolekcju i onda iz toga -
+//-izvlaci samo id usera koji su prijatelji useru koji poziva metod
+public function friends_ids(){
+  return collect($this->friends())->pluck('id');
+}
+Pravimo i rutu za testiranje ovog metoda
+//ruta za testiranje friends_ids() metoda traita Friendable.php koji vadi samo id-eve prijatelja usera koji je pozvao metod,
+//-koriseci pri tom friends() metod koji je takodje definisan u trait Friendable ali to sad nije vazno...
+Route::get('/friendsids', function () {
+  return \App\User::find(1)->friends_ids();
+});
+Pravimo metod is_friends_with() u traitu Friendable koji ce da proverava da li je user ciji id stigne kao argument metodu prijatelj sa-
+-userom koji je pozvao metod
+//metod proverava da li je user sa id-em koji stigne kao parametar ovog metoda prijatelj sa userom koji poziva ovaj metod tj da li je-
+//njegov id u arrayu koji vraca friends_ids() metod koji je definisan odmah iznad
+public function is_friends_with($user_id){
+  //koristeci in_array() kom kao argumente dajemo id usera koji je stigao kao parametar i array koji vraca friends_ids() metod pretra-
+  //zujemo array koji vraca friends_ids i ako nadjemo id koji trazimo vracamo true a ako ne vracamo false 
+  if(in_array($user_id, $this->friends_ids()->toArray())){
+    return response()->json('true', 200);	
+  }else{
+    return response()->json('false', 200);		
+  }
+}
+Pravimo i rutu za testiranje
+//ruta za testiranje metoda is_friends_with() traita Friendable.php koji proverava da li je user ciji id damo kao parametar -
+//-metodu prijatelj sa userom koji poziva ovaj metod
+Route::get('/isfriend', function () {
+  return \App\User::find(1)->is_friends_with(2);
+});
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 14 - Social network in Laravel 5.3 and Vuejs 2.0 #14 Completing friendable trait
+Link - https://www.youtube.com/watch?v=RN7GlahIywE&index=14&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+Nastavljamo da pravimo metod u traitu Friendable.php
+//metod koji vadi samo id-eve(znaci ne sve podatke) usera koji su poslali poziv za prijateljstvouseru koji poziva ovaj metod, prvo -
+//-pozivamo metod pending_friend_requests() koji je definisan u ovom fajlu iznad koji vadi sve usere koji su poslali poziv useru koji-
+//-poziva ovaj metod i onda od toga pravi kolekcju i onda iz toga izvlaci samo id usera koji su poslali request za friendship
+public function pending_friend_requests_ids(){
+  return collect($this->pending_friend_requests())->pluck('id')->toArray();
+}
+Pravimo metod kojim vadimo sve usere kojima je user koji poziva metod poslao request za friendship a ovi ga jos uvek nisu prihvatili
+//metod kojim vadimo sve usere kojima je user koji poziva metod poslao zahtev za prijateljstvo a oni jos uvek nisu prihvatili tj kolo-
+//-na status 'friendships' tabele je 0
+public function pending_friend_reaquests_sent(){
+  $users = array();
+  //vadimo redove 'friendships' tabele u kojima je requester kolona jednaka id-u usera koji poziva metod a kolona status 0
+  $friendships = Friendship::where('status', 0)
+  		           ->where('requester', $this->id)
+  			   ->get();
+  //koristeci $friendships array vadimo iz 'users' tabele usere kojima smo poslali poziv a nisu nam odgovorili i dalje			
+  foreach ($friendships as $friendship){
+    array_push($users, \App\User::find($friendship->user_requested));
+  }
+  return $users;
+}
+Zatim pravimo metod koji samo vadi ideve usera kojima smo poslali request a oni jos uvek nisu prihvatili
+//metod koji samo vadi id-eve usera kojima je user koji poziva metod poslao request za prijateljstvo a oni i dalje nis prihvatili, ko-
+//-risti metod pending_friend_requests_sent() koji je definisan iznad a koji vraca array sa svim podatcima tih usera i iz njega vadi -
+//-samo njihove id-eve
+public function pending_friend_requests_sent_ids(){
+  return collect($this->pending_friend_requests_sent())->pluck('id')->toArray();
+}
+pravimo sledeci metod 
+//metod koji proverava da li user koji poziva metod ima pending request od odredjenog usera ciji id stize kao argument pri pozivanju -
+//-metoda, poziva se metod pending_friend_requests_ids() koji vraca array sa id-evima usera koji su poslali request za prijateljstvo-
+//-useru koji poziva ovaj metod a on im jos uvek nije odgovorio
+public function has_pending_friend_request_from($user_id){
+  if(in_array($user_id, $this->pending_friend_requests_ids())){
+    return 1;
+  }else{
+    return 0;
+  }
+}
+i jos jedan metod u traitu Friendable.php
+//metod koji proverava da li je user koji poziva ovaj metod poslao request za prijateljstvo useru ciji id stize kao argument metoda -
+//-a ovaj i dalje nije odgovorio, poziva se metod pending_friend_requests_sent_ids() koji je definisan iznad koji vraca array sa id-ev-
+//-ima usera kojima je pozivalac ovog metoda poslao request za prijateljstvo a oni jos nisu odgovorili
+public function has_pending_friend_request_sent_to($user_id){
+  if(in_array($user_id, $this->pending_friend_requests_sent_ids())){
+    return 1;
+  }else{
+    return 0;
+  }
+}
+Takodje menjamo u celom Friendable.php da metodi koji su do sada vracali json vracaju 1 za true ili 0 za false
+Na kraju u metodu add_friend() na pocetku dodajemo da proveri da li smo vec poslali tom useru request, da li smo vec prijatelj sa njim
+- dali je on nama poslao request za prijateljstvo i da li smo mozda sami sebi poslali poziv za friendsip(pogledaj add_friend() metod-
+-u traitu Friendable.php zakomentarisano je )
+Takodje u accept_friend() metodu na vrhu dodajemo da proveri da li postoji request za friendship od usera cije prijateljstvo prihvatamo
+(pogledaj metod accept_friend() traita Friendable.php zakomentarisano je)
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 15 - Social network in Laravel 5.3 and Vuejs 2.0 #15 - Creating Vue component Friend.vue
+Link - https://www.youtube.com/watch?v=-mWngSBdAW0&index=15&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+Pocinjemo da koristimo Vuejs
+U fajlu app.js iz 'socnetwork/resources/assets/js' na liniji 16 umesto example vue komponente koja je tu po difoltu instanciramo kompo-
+-nentu friend koju cemo napraviti - Vue.component('friend', require('./components/Friend.vue')); 
+A fajl Example.vue iz 'socnetwork/resources/assets/js/components' rename-ujemo u Friend.vue
+U profile.blade.php vjuu dodajemo div koji ce prikazivati komponentu Friend.vue izmedju div-a sa slikom i div-a About Me
+<div class="panel panel-default">
+  <div class="body">
+    <friend></friend>
+  </div>
+</div>
+U Friend.vue u <template> unosimo neki glup tekst i onda radimo u terminalu "npm run dev" pa je ovaj pokrenuo gulp watch, nije mi bas-
+-najjasnije ovo sranje sa npm i gulp.... U svakom slucaju mora svo vreme da bude u watchu da bi kompajlirao promene koje unosimo u Vue-
+-fajlove da bi radilo
+Sada se izmedju diva sa sliko i diva About Me pojavio div u kom je tekst koji smo uneli u <template> u Friend.vue, napomena- morao sam-
+-u Chrome-u da uradim clear browsing data tj da ispraznim kes posto mi je prijavljivao neki error
+Ako sam ga dobro shvatio u bootstrap.js fajlu ima na liniji 29 napravljen neki interceptor koji ce svakom requestu koji dolazi od vuejs-
+- dodati csrf_token u header
+U profile.blade.php vjuu u <friend> dodajemo prop profile_user_id da bi komponenta Friend.vue imala pristup id-u usera ciji profil tre-
+-nutno gledamo, taj id ce koristiti da proveri kakva je nasa relacija sa tim userom tj da li nam je prijatelj ili nije ili nam je posl-
+-ao zahtev za frendship ili mi njemu
+<friend :profile_user_id="{{ $user->id }}"></friend>
+Sada u Friend.vue komponenti koja je u 'socnetwork2/resources/assets/js/components' u script tagu pravimo da kada je komponenta u stanju
+- mount uradi sledece: da na rutu /check_relationship_stauts/{id}' posalje id usera koji sada gledamo(koji smo dobili preko propa koji-
+-smo malopre definisali u profile.blade.php) i posalje get request na rutu koja ce za sada samo izvuci podatke tog usera iz 'users' tab-
+-ele i console.log()-ujemo ih kad ruta odradi svoje
+export default {
+  mounted() {
+  //koristeci profile_user_id prop saljemo get request ruti /check_relationship_stauts/{id} koja ce izvuci podatke usera ciji smo -
+  //id poslali iz 'users' tabele i kad nam odgovori console.log-ujemo te podatke
+  this.$http.get('/check_relationship_stauts/' + this.profile_user_id)
+    .then((resp) => {
+      console.log(resp)   
+    })
+  },
+  //prop profile_user_id je bajndovan u <friend> tagu u profile.blade.php i vrednost mu je id usera ciji profil trenutno gledamo 
+  props: ['profile_user_id'],
+}
+ruta '/check_relationship_stauts/{id}' je za sada closure i sama radi query u 'users' tabeli i vraca onog usera ciji id posaljemo
+//ruta za test kojoj Friend.vue salje id usera cije podatke ova ruta vadi iz 'users' tabele i salje ih nazad u Friend.vue komponentu
+Route::get('/check_relationship_stauts/{id}', function ($id) {
+    return \App\User::find($id);
+});
+tako da sada kad odemo u neciji profil u konzoli ce biti logovani njihovi podatci (u Response/body), 
+AJAX se iz komponente salje ka ruti zato sto je AJAX u mounted()funkciji vuejsa koja se aktivira kad je stranica ucitana ako sam dobro
+-shvatio...
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 16 - Social network in Laravel 5.3 and Vuejs 2.0 #16 Vuejs - Friend component relationship status
+Link - https://www.youtube.com/watch?v=DGjhZXqNFnc&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=16
+Da ne bi kao u prethodnoj lekciji Vue slao AJAX requeste u web.php tj u closure rutu pravimo kontroler koji ce hendlovati ove requeste-
+-komandom "php artisan make:controller FriendshipsController", ruta '/check_relationship_stauts/{id}' koju smo do sada koristili nam -
+-vise nece trebati tako da u Auth middlewareu u web.php pravimo rutu check koja ce kad stigne AJAX iz Friend.vue gadjati check() metod-
+-FriendshipsControllera
+Route::get('/check_relationship_stauts/{id}', [
+    'uses' => 'FriendshipsController@check',
+    'as' => 'check'
+]);
+Pravimo check() metod u FriendshipsControlleru koji ce pozivati metode traita Friendable.php da proveri kakav je status izmedju trenut-
+-no ulogovanog usera tj onog od koga se poziva check() metod i usera ciji je id poslao AJAX iz Friend.vue komponente, takodje na vrhu -
+-kontrolera uvozimo Auth fasadu da bi imao pristup trenutno ulogovanom useru
+//metod poziva ruta 'check' kada stigne AJAX iz Friend.vue komponente koji salje id usera kom zelimo da proverimo u kakvoj je relaciji
+//sa nama pa onda pozivamo metode traita Friendable.php ciji metodi to proveravaju i u zavisnosti od toga saljemo odgovor u Friend.vue
+public function check($id){
+  //pozivamo is_friends_with() metod traita Friendable.php koji vraca 1 ako je user koji poziva metod friend sa userom ciji id posaljemo
+  //-kao parametar metodu, ako vrati 1 tj ako su prijatelji tj stats kollona 'friendships' tabele je 1 vrati status => friends
+  if(Auth::user()->is_friends_with($id) === 1){
+      return ['status' => 'friends'];	
+  }
+  //pozivamo has_pending_friend_request_from() metod traita Friendable.php koji vraca 1 ako user koji poziva ovaj metod ima poslat req-
+  //uest za friendship od usera ciji id saljemo kao argument tj ovaj nas je pozvao za prijatelja ali nismo jos uvek prihvatili
+  if(Auth::user()->has_pending_friend_request_from($id)){
+      return ['status' => 'pending'];	
+  }
+  //pozivamo has_pending_friend_request_sent_to() metod traita Friendable.php koji vraca 1 ako je user koji poziva metod poslao useru -
+  //ciji id salje kao argument zahtev za prijateljstvo a ovaj mu jos nije odgovorio
+  if(Auth::user()->has_pending_friend_request_sent_to($id)){
+      return ['status' => 'waiting'];	
+  }
+  //ako u 'friendships' tabeli nema reda u kom su oba id -a i usera koji poziva metod i usera ciji id je stigao AJAX-om znaci da medju -
+  //njima nema nikakve relacije i vracamo status 0
+    return ['status' => 0];
+}
+tako da ce sada komponenta Friend.vue u zavisnosti od statusa veze ova dva usera u 'friendships' tabeli console.log-ovati :
+friend, pending, waiting ili 0
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 17 - Social network in Laravel 5.3 and Vuejs 2.0 #17 - Vue js - displaying friendship status
+Link - https://www.youtube.com/watch?v=fy4VzMwdKhg&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=17
+Sada radimo u Friend.vue komponenti da bi nam prikazala koji nam status vraca check() metod FriendshipsControllera
+U Friend.vue komponenti u data() definisemo varijable status koja ce se menjati zavisno od toga sta nam vrati check()metodFriendshipsCo
+-ntrollera i loading koja je po difoltu true ali kad stigne response od check() metoda postaje false nju koristimo da bi useru na ekranu
+-pisalo loading dok server radi svoj deo posla, zatim u AJAX-u kad stigne response iz check() metoda menjamo status varijablu u ono sto-
+-je poslao check() (friends, pending, waiting ili 0) i u zavisnosti od toga koju je vrednost dobila status varijabla u <template> izb-
+-acujemo ili btn za add friend ili za accept friend ili ako smo vec poslali request pisemo waiting for response ili ako smo vec prijat-
+-elji pisemo friends, ovo smo dodali u <template>
+<!-- dok traje ucitavanje varijabla loading je true tako da prikazujemo p u kom pise da se ucitava -->
+<p v-if="loading">
+        Loadng...  
+</p>
+    
+<p v-if="!loading"><!--ako je zavrseno ucitavanje tj ako je var loading == false-->
+  <!-- ako je check() metod FriendshipsControlera vratrio 0 tj nisu prijatelji niti je neko poslao request za friendship prikazuje 
+    se btn Add Friend -->
+  <button class="btn btn-success" v-if="status == 0">Add Friend</button>
+  <!-- ako je check() metod FriendshipsControlera vratrio pending tj nisu prijatelji ali je useru koji je ulogovan poslat request 
+    za friendship od usera ciji profil gleda-->
+  <button class="btn btn-success" v-if="status == 'pending'">Accept Friend</button>
+  <!-- ako je check() metod FriendshipsControlera vratrio waiting tj nisu prijatelji ali je user koji je ulogovan poslao request 
+    za friendship useru ciji profil gleda-->
+  <span v-if="status == 'waiting'">Waiting for response</span>
+  <!-- ako je check() metod FriendshipsControlera vratrio friends tj prijatelji su-->
+  <span v-if="status == 'friends'">Friends</span>
+</p>
+ovo smo dodali u AJAX kad stigne reponse od check() metoda
+//u varijablu status koja je definisana u data() upisujemo ono sto nam vrati check() metod FriendshipsControllera, odgovor se -
+//-nalazi u body.status u responsu
+this.status = resp.body.status  
+//podesavamo varijablu loading na false, takodje je varijabla definisana u data()  
+this.loading = false
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 18 - Social network in Laravel 5.3 and Vuejs 2.0 #18 Adding a friend with vuejs
+Link - https://www.youtube.com/watch?v=s3kaX6zkWfs&index=18&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+Sada cemo praviti add_friend() metod u Friend.vue komponenti koji ce se pozivati kad se klikne btn Add Friend koji komponenta prikazuje-
+-ako check() metod FriendshipsControllera vrati 0 tj nismo prijatelj sa userom ciji profil gledamo niti smo mu poslali request za frien-
+-dship niti on  nama
+Prvo vezujemo btn Add Friend sa metodom add_friend koji cemo napraviti u methods sekciji Friend.vue komponente
+<button class="btn btn-success" v-if="status == 0" @click="add_friend">Add Friend</button>
+Pravimo methods: sekciju u Friend.vue komponenti i u njoj metod add_friend() 
+//metod koji ce slati AJAX add_friend() metodu FriendshipsControlera preko rute add_friend/id koji ce onda pozivat metod add_friend()-
+//traita Friendable.php da upise red u 'friendships' tabelu gde ce requester biti user koji je kliknuo btn a user_requested onaj na ci
+//jem proflu smo kliknuli btn AddFriend
+add_friend(){
+  //menjamo varijablu loading u true da bi useru na ekranu dok ceka da server upise red u 'friendships' tabelu pisalo Loading...
+  this.loading = true
+  //saljemo AJAx na rutu '/add_friend/id' sa idem usera koji je upisan u prop profle_user_id
+  this.$http.get('/add_friend/' + this.profile_user_id)
+  .then((r) => {
+    console.log(r)
+    //kad stigne odgovr i ako je 1 (znaci da je upisan red u 'friendships' tabelu)
+    if(r.body == 1){
+      //menjamo varijablu status u waiting da ne bi vise bio btn AddFriend na ekranu
+      this.status = 'waiting'
+      //vracamo loading varijablu u false da vise useru ne bi na ekranu pisalo Loading...
+      this.loading = false
+    }
+  })
+}
+Pravimo rutu '/add_friend/id' koja ce gadjati add_frend() metod FriendshipsControllera
+//ruta koja ide na metod ad_friend() FriendShipsControllera koji poziva add_friend() metod traita friendable.php da upise u
+//'friendships' tabelu ko je kome proslao request za frendship
+Route::get('/add_friend/{id}', [
+    'uses' => 'FriendshipsController@add_friend',
+    'as' => 'add_friend'
+]);
+Pravimo add_friend() metod u FrendshipsControlleru
+//Metod kojim upisujemo red u 'friendships' tabelu kad se klinke btn AddFriend na necijem prfilu iz Friend.vue komponente stize AJAX 
+//preko rute add_friend/id i onda ovde pozivamo metod add_friend()(saljemo mu id usera kog Add-ujemo) iz traita Friendable.php koji 
+// ce odraditi ceo poso
+public function add_friend($id){
+  return Auth::user()->add_friend($id);
+}
+tako da ako sada kliknemo AddFriend btn na necijem profilu bice upisan red u 'friendships' tabelu tj bice mu poslat zahtev za friends-
+-hip i kad on poseti nas profil na ekranu ce mu bii btn AddFriend posto ce check() metod FriendshipsControlera vracati pending
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 19 - Social network in Laravel 5.3 and Vuejs 2.0 #19 Accept friendship with vuejs
+Link - https://www.youtube.com/watch?v=4XfWonWyLmA&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=19
+Prvo uklanajmo gresku u profile.blade.php posto je div koji kaci komponentu Frend.vue kad smo na svom profilu prikazivao btn AddFriend-
+-tako da sada ceo div stavljamo u @if koji proverava dali smo na svom profilu i ako jesmo ne prikazuje ga
+@if(Auth::id() !== $user->id)
+Sada rad na prihvatanju necijeg friendship requesta, prvo u komponenti Friend.vue na btn AcceptFriend vezujemo na klik event da poziva
+-metod accept_friend() koji cemo napraviti u methods: sekciji 
+<button class="btn btn-success" v-if="status == 'pending'" @click="accept_friend">Accept Friend</button>
+sada pravimo accept_friend() metod u komponenti koji ce slati ajax ruti accept_friend/id kad neko prihvati neciji request za friendship
+//metod se poziva kad se klikne btn AcceptFriend i salje AJAX metodu accept_friend() FriendshipsControllera preko rute accept_friend/id
+//metod accept_friend() FriendshipsControllera ce pozvati istoimeni metod traita Friendable.php koji ce da odradi sve i vrati 1 ako -
+//sve prodje u redu tj updateuje status kolonu 'friendships' tabele u 1 tamo gde je requester onaj ciji poziv prihvatamo a user_reques
+//ted onaj koji je kliknuo AceptFriend btn
+accept_friend(){
+  //menjamo varijablu loading u true da bi useru na ekranu dok ceka da server upise red u 'friendships' tabelu pisalo Loading...
+  this.loading = true
+  //saljemo AJAx na rutu '/accept_friend/id' sa idem usera koji je upisan u prop profle_user_id
+  this.$http.get('/accept_friend/' + this.profile_user_id)
+  .then((r) => {
+    console.log(r)
+    //kad stigne odgovr i ako je 1 (znaci da je upisan red u 'friendships' tabelu)
+    if(r.body == 1){
+      //menjamo varijablu status u friends da ne bi vise bio btn AcceptFriend na ekranu
+      this.status = 'friends'
+      //vracamo loading varijablu u false da vise useru ne bi na ekranu pisalo Loading...
+      this.loading = false
+    }
+  })
+}
+Pravimo rutu accept_friend/id
+//ruta koja gadja accept_friend() metod FriendshipsControllera koji ce pozvati metod accept_friend() traita Friendable.php kad 
+//neko klikne AcceptFriend btn na profilu nekog ko mu je poslao friend request, stize AJAX iz Friend.vue komponente
+Route::get('/accept_friend/{id}', [
+    'uses' => 'FriendshipsController@accept_friend',
+    'as' => 'accept_friend'
+]);
+pravimo accept_friend() u metod FriendshipsControlleru
+//metod kojim updateujemo status kolonu 'friendships' tabele tj kojim neko prihvata neciji poziv za friendship, stize AJAX iz 
+//Friend.vue komponente preko rute add_friend/id sa id em usera kog prihvatamo i onda pozivamo accept_friend() metod traita 
+// Friendable.php koji radi ceo poso
+public function accept_friend($id){
+  	return Auth::user()->accept_friend($id);
+}
+I sada kad odemo na profil nekoga ko nas je dodao za prijatelja bice btn AcceptFriend i kad ga kliknemo promenice se kolona status u 
+'friendships' tabeli tamo gde je nas id u koloni user_requested a id usera ciji poziv prihvatamo u koloni requester u 1 i bicemo prija-
+-telji  vise nece biti btn AcceptFriend na ekranu nego ce pisati Friends
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 20 - Social network in Laravel 5.3 and Vuejs 2.0 #20 - Noty after sending and accepting friend requests
+Link - https://www.youtube.com/watch?v=2-u2ZghfLVE&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=20
+Samo dodajemo u metode add_friend i accept_friend u komponenti Friend.vue da kad primi response iz FriendshipsControllera i ako je usp-
+-esno tj vraceno je 1 da prikaze notifikaciju na ekranu pozivajuci noty plugin tj paket koji smo instalirali ranije,
+ovo ide u add_friend
+//podesavamo noty plugin da prikaze success poruku
+noty({
+  type: 'success',
+  layout: 'bottomLeft',
+  text: 'Friend request sent.'
+})
+a ovo u accept_friend
+//podesavamo noty plugin da prikaze success poruku
+noty({
+  type: 'success',
+  layout: 'bottomLeft',
+  text: 'You are now friends.'
+})
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 21 - Social network in Laravel 5.3 and Vuejs 2.0 #21 Setting up drivers for laravel 5.3 notifications
+Link - https://www.youtube.com/watch?v=dbQcatWyYcg&index=21&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+Napravio sam novi nalog na mailtrap.io posto ce mi mozda trebati za ovaj tutorijal, username:lacparacku@yahoo.com, pass:pikolo
+Podesavam u .env fajlu mail sa userom i passwordom sa novog mailtrap akaunta
+MAIL_DRIVER=smtp
+MAIL_HOST=mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=d42cefb0a6214c
+MAIL_PASSWORD=d2a2ebfd97aa1d
+MAIL_ENCRYPTION=null
+Takodje se koristi pusher, vec imam nalog username:vladasarac@hotmail.com, pass:pikolo, pravim novu aplikaciju socnetwork2, u .env fajl
+-unosim podesavanja za pusher(udje se u aplikaciju koju smo kreirali pa se ide na link Overview i tamo su ovi podatci)
+PUSHER_APP_ID=318536
+PUSHER_KEY=3dec51ed173463ae0ed3
+PUSHER_SECRET=f9d0fb5e7419fa002de3
+Sada ide komanda u terminal "npm install laravel-echo --save" da se instalira laravel echo
+Onda se u bootstrap.js na dnu odkomentarise ovo:
+
+import Echo from "laravel-echo"
+
+window.Echo = new Echo({
+    broadcaster: 'pusher',
+    key: 'your-pusher-key'
+});
+sada treba u fajlu app.php iz 'socnetwork2/config' odkomentarisati na 177 linijiovo: App\Providers\BroadcastServiceProvider::class,
+onda komandom "php artisan notifications:table" pravimo migraciju za neku tabelu 'notifications' cija mi je svrha nepoznata za sada
+Nastavak o ovome u sledecoj lekciji...
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 22 - Social network in Laravel 5.3 and Vuejs 2.0 #22 - Understanding Pusher
+Link - https://www.youtube.com/watch?v=Z2bxgoNvST8&index=22&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+Sada kucamo komandu "php artisan make:notification NewFriendRequest" koja ce napraviti folder 'Notifications' u 'socnetwork2/app' i u -
+-folderu ce napraviti fajl NewFriendRequest.php
+Sada je on tu nesto pricao o pusheru i broadcastingu itd... Nije mi bas jasno...
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 23 - Social network in Laravel 5.3 and Vuejs 2.0 #23 Understanding notification classes in laravel
+Link - https://www.youtube.com/watch?v=UAt-U_i-uHE&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=23
+u via() metodu NewFriendRequest.php notfication klase upisujemo: return ['mail','broadcast','database']; , ako dobro shvatam ovo znaci -
+-da cemo notifikacije slati na mail, broadcastovati ih i upisivati u bazu u 'notifications' tabelu
+Sada u add_friend() metodu FriendshipsControllera dodajemo da kad neko nekog doda za prijatelja pozove NewFriendRequest notification kl-
+-asu da mu posalje notifikaciju da ga je neko dodao za prijatelja, ovako sada izgleda metod add_friend() FriendshipsControllera
+public function add_friend($id){
+  $resp = Auth::user()->add_friend($id);
+  //pozivamo NewFriendRequest notification klasu da posalje notifikaciju useru kog smo addovali za prijaelja
+  User::find($id)->notify(new \App\Notifications\NewFriendRequest(Auth::user()));
+  //vracamo $resp u Friend.vue
+  return $resp;
+}
+U NewFriendRequest.php na vrhu pravimo public property $user: public $user;  a u __constructu kazemo:  $this->user = $user;
+Zatim podesavamo metod toMail() koji ce ako dobro shvatam slati mail useru koji je addovan za prijatelja
+public function toMail($notifiable){
+  return (new MailMessage)
+    //kreiramo mail za usera koji je dodat za prijatelja i salje mo mu ime usera koji ga je dodao
+    ->line('You recived a new friend request from ' . $this->user->name)
+    //saljemo mu link ka profilu usera koji ga je dodao
+    ->action('View profile', route('profile', ['slug' => $this->user->slug]))
+    ->line('Thank you for using our socnetwork!');
+}
+I na dnu u metodu toArray() upisujemo ovo, mislim da ce ovo biti upisano u 'notifications' tabelu u bazi ali nisam siguran
+public function toArray($notifiable){
+  return [
+    'name' => $this->user->name,
+    'message' => $this->user->name . 'send you a friend request.'
+  ];
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 24 - Social network in Laravel 5.3 and Vuejs 2.0 #24 Listening to events using laravel echo
+Link - https://www.youtube.com/watch?v=hhd35C81ykE&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=24
+U folderu 'socnetwork2/resources/assets/js/components' pravimo novu vuejs komponentu Notification.vue i registrujemo je u app.js iz-
+-'socnetwork2/resources/assets/js'-Vue.component('notification', require('./components/Notification.vue'));
+-komponenta ce se kaciti na <notification> tag u app.blade.php layoutu i tamo pravimo i property id koji ce komponenti slati id -
+- trenutno ulogovanog usera
+<notification :id="{{ Auth::id() }}"></notification>
+u komponenti definisemo <template> u kom za sad nece biti nista a u <script> pisemo ovo
+export default {	
+  //kad je mountovana komponenta pozivamo listen() metod koji pravimo u methods sekciji
+  mounted(){
+    this.listen()	
+  },
+  //ovde primamo id trenutno ulogovanog usera koji stize iz layouta app.blade.php koji kaci ovu komponentu 
+  props: ['id'],
+  //
+  methods: {
+  //u ovom metodu pozivamo laravel Echo da valjda broadcastuje pusheru sta treba ako sam dobro shvatio
+    listen(){
+      Echo.private('App.User.' + this.id)
+  	  .notification( (notification) => {
+  	    alert('new notification')
+  	    consloe.log(notification)	
+  	  })
+      }	
+    }
+  }	
+sada u bootstrap.js pravimo ovaj metod koji ce ako sam dobro shvatio logovati u konzolu ono sto nam Pusher.com posalje
+Pusher.log = function(message){
+  window.console.log(message)	
+}
+sada kad refreshujemo profil u socnetwork2.dev u konzoli nam pise da je Pusher:State changed conecting with socet...
+pise da je chanel: private-App.User.4 posto je id usera koji je trenutno ulogovan 4 a podeseno je u aplikaciji negde da ide preko tog-
+-private chanela sta god to bilo...
+Sada na pusher.com idemo na link Debugconsole i onda kliknemo Show event creator i onda u formu unosimo u polje channel -
+- private-App.User.4 (da smo ulogovani sa nekim drugm id onda bi bio neki drugi broj na kraju) i u polje event - new notification
+i onda klik na send notification i ako sada pogledamo u konzolu videcemo da je stigla poruka od pushera tj da se desio event new noti-
+-fication koji je bio na channelu private-App.User.4 i taj user vidi to u konzoli brauzera a recimo drugi user koji je bo ulogovan na -
+-mozzili i kom je id 2 (znaci channel je private-App.User.2) nema to u konzoli posto valjda nije bilo na njegovom kanalu emitovano...
+
+VAZNO VAZNO VAZNO !!! kad sam sve ovo odradio sjebala se cela aplikacja, barem vuejs deo aplikacije, i u konzoli je izbaciavao Error-
+-'Pusher is not defined', onda sam bunario pa sam radio svasta npr komanda "composer require pusher/pusher-php-server", pa onda komanda-
+-"npm install pusher-js", pa onda "npm install --save-dev pusher-js", pa onda "npm install --save laravel-echo pusher-js" i opet nije -
+-radilo i izbacivao je isti error, na kraju sam u bootstrap.js fajl dodao ovo : import Pusher from 'pusher-js' iznad import Echo i sada
+-radi kao kod ovog majmuna , to sam nasao ovde-
+https://laracasts.com/discuss/channels/laravel/uncaught-referenceerror-pusher-is-not-defined
+neko je sranje sa ovim pusherom, nije dovoljno samo podesiti .env fajl i u bootstrap.js odkomentarisati one redove koje je pokazao u le-
+-kciji nego mora da se instalira php pusher libraries i javascript pusher libraries a to se valjda radi onim komandama koje sam ispro-
+-bavao i onda treba pored svega toga da se dopise import u bootstrap.js - import Pusher from 'pusher-js' , tek onda je proradilo
+takodje nije pokazao u videu da treba u .env da se upise : BROADCAST_DRIVER=pusher
+ovo je aplikacija na pusher.com koju koristim - socnetwork2-development, mislim da je cluster mt1(us eastcoast) 
+Jos jedno sranje posto sam se izlogovao i opet krenuo da se ulogujemo izbaciavao mi je gomilu nekih errora kao vue-u varijabla id nije -
+-poznata tj nema vrednost onda sam u Friend.vue u props varijabli id dao vrednost "id": "" i onda je pustio da idem na login stranicu i 
+-kad sam se ulogovao vrato sam sve kako je bilo i sada nema errora...
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 25 - Social network in Laravel 5.3 and Vuejs 2.0 #25 sending out notifications
+Link - https://www.youtube.com/watch?v=YLxAKcDNQdU&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=25
+Sada smo testirali ovo sve sa notifikacijama u primeni imao sam error pa sam nasao da sam imao gresku u NewFriendRequest.php iz foldera
+-'socnetwork2/app/Notifications', tacnije u __construct() sam zaboravio da ubacim argument $user i kad sam to dodao radilo je kako treba
+public function __construct($user){
+  $this->user = $user;
+}
+Znaci sada kad neko nekog doda za prijatelja u ovom slucaju Sima Janu upisace se red u 'friendships' tabelu kao i pre a onda ce jani -
+-iskociti alert 'new notification' i u konzoli ce joj pisati da je stigao object koji ima propeerty message a to je ono sto smo -
+-definisali u toArray() metodu u NewFriendRequest.php, znaci pisace name: Jana Janic i message: Jana Janic send you a friend request.
+public function toArray($notifiable){
+        return [
+          'name' => $this->user->name,
+          'message' => $this->user->name . ' send you a friend request.'
+        ];
+}
+Takodje ce toMail() metod poslati na mailtrap.io email u kom ce biti link ka Janinom profilu, i u 'notifications' tabelu ce biti upisan
+-novi red i pisace u koloni type - App\Notifications\NewFriendRequest i tako dalje, pogledaj...
+Na pusher.com u Debug Console ce biti novi log - Api Message koji kad se klikne ce pokazati da je emitovano na private-App.User.2 kanal
+-a to je Janin kanal posto je ona id-2 i pisace name i message iz toArray() metoda NewFriendRequest.php
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 26 - Social network in Laravel 5.3 and Vuejs 2.0 #26 Accepting friend request notification
+Link - https://www.youtube.com/watch?v=8LKcshildLw&index=26&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+Sada pravimo novu notifikacion klasu za prihvatanje prijatelja, prvo komandom "php artisan make:notification FriendRequestAccepted"
+cime smo napravili fajl FriendRequestAccepted.php u folderu 'socnetwork2/app/Notifications', u toj klasi prvo pravimo public property-
+-$user i ubacujemo ga u __construct
+public function __construct($user){
+      $this->user = $user;
+}
+U metod via() upisujemo da su kanali osim 'mail' i broadcast i database ako dobro shvatam ovo znaci da cemo i broadcastovati pusher.com
+-u i da cemo notifikaciju upisivati u 'notifications' tabelu u bazi osim sto cemo slati mail sto je po difoltu vec bilo upisano u via()
+public function via($notifiable){
+        return ['mail','broadcast','database'];
+}
+Podesavama mailTo() metod u FriendRequestAccepted.php da useru koji je prihvacen za prijatelja posalje mail
+public function toMail($notifiable){   //podesavamo mail koji ce biti poslat useru koji je prihvacen za prijatelja
+        return (new MailMessage)
+                    ->line($this->user->name . 'accepted your friend request.')
+                    ->action('View Profile', route('profile', ['slug' = > $this->user->slug]))
+                    ->line('Thank you for using our application!');
+}
+Zatim radimo na toArray metodu koji valjda broadcastuje i upisuje u 'notifications' tabelu
+public function toArray($notifiable){
+        return [
+            'name' => $this->user->name,
+            'message' => 'Accepted your friend request'
+        ];
+}
+Sada u accept_friendship() metodu FriendshipsControllera podesavamo da kad pozovemo accept_friend() metod traita Friendable.php pre ne-
+-go vratiom odgovor u Friend.vue komponentu pozovemo FriendRequestAccepted notification klasu koja ce da posalje useru koji je prihvac-
+-en za prijatelja mail i notifikaciju i da upise red u 'notifications' tabelu
+//metod kojim updateujemo status kolonu 'friendships' tabele tj kojim neko prihvata neciji poziv za friendship, stize AJAX iz Friend.vue-
+//komponente preko rute add_friend/id sa id em usera kog prihvatamo i onda pozivamo accept_friend() metod traita Friendable.php koji
+// radiceo poso
+public function accept_friend($id){
+  //pozivamo accept_friend() metod traita Friendable.php da updateuje 'friendships' tabelu tj kolonu status
+  $resp = Auth::user()->accept_friend($id);
+  //nalazimo usera kojem je prihvacen poziv za prijateljstvo i pozivamo na njemu FriendRequestAccepted notification klasu da muposalje
+  //mail i notifikaciju preko pusher.com a kao argument dajemo usera koji je trenutno ulogovan tj onog koji ga je prihvatio zafrienda	
+  User::find($id)->notify(new \App\Notifications\FriendRequestAccepted(Auth::user())); 	
+  //vracamo $resp u Friend.vue($resp ce biti 1)
+  return $resp;
+}
+Izgleda da mora da se resetuje server kad se ovo radi posto mi je sada vracao neke retardirane errorre dok nisam restartovao appacha i
+-onda je posle radio najnormalnije...
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 27 - Social network in Laravel 5.3 and Vuejs 2.0 #27 Laravel Queue system
+Link - https://www.youtube.com/watch?v=0evnNFssuAw&index=27&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+Posto sada ove notifikacije sporo idu posto aplikacija mora da uradi mnogo stvari odjednom sada cemo koristiti Queue tj napravicemo -
+-tabelu 'jobs' u koju ce aplikacija upisivati sta treba da odradi pa cemo kad damo komandu to i uraditi
+komandom 'php artisan queue:table' pravimo migraciju za 'jobs' tabelu i komandom 'php artian migrate' je migririamo, zatim u .env fajl-
+-upisujemo da ce queue driver biti baza - QUEUE_DRIVER=database
+na otvaranju notification klasa (NewFriendRequest.php i FriendRequestAccepted.php) pisemo da implementiraju ShouldQueue
+class NewFriendRequest extends Notification implements ShouldQueue{}
+class FriendRequestAccepted extends Notification implements ShouldQueue{}
+Kada sam sve ovo odradio onda sam resetovao server i dao komandu 'npm run dev' i sada kad je user Vlada dodao Janu za prijatelja upisan
+-je red u friendships tabelu ali nije stiglo nista od pusher.com i nije otisao mail na mailtrap.io ali je zato u 'jobs' tabelu upisano-
+-3 reda u kojima ako dobro shvatam pise da treba to da odradi kad mu se kaze
+Sada u terminalu kucamo komandu "php artisan queue:work" i on odradjuje ono sto pise u 'jobs' tabeli tj salje mail i broadcatuje na -
+-pusher.com i upisuje red u 'notifications' tabelu, ova komanda kad se da ona nastavlja da radi i cim je novi red upisan u 'jobs' tabe-
+-lu ona ga izvrsava tako da kad je Jana prihvatila Vladin request posto je ovo jos uvek bilo u stanju rada odmah je poslao mail, broad-
+-catovao i upisao u 'notifications tabelu
+sve u svemu ubuduce kadtreba da se odradi ovo sa notifikacijama mora se dati komanda'php artisan queue:work'da bi aplikacija odradila
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 28 - Social network in Laravel 5.3 and Vuejs 2.0 #28 Using notification sounds in laravel and vuejs
+Link - https://www.youtube.com/watch?v=A7-Gxj5Qf9Y&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=28
+Sada cemo malo izmeniti Notification.vue da bi nam noty paket koji smo ranije instalirali ispisao prikladnu poruku i pusto audio poruku
+-tj notifikaciju, pre svega ovoga sam sa GitHuba od ovog lika skinuo folder 'audio' u kom su semplovi i ubacio u folder 'public' u apl-
+-ikaciji 
+radimo u listen() metodu u notfication.vue i sada ovako izgleda
+listen(){
+  Echo.private('App.User.' + this.id)
+    .notification( (notification) => {
+      //alert('new notification')
+      //izbaci notifikaciju koristeci noty paket	
+      noty({
+        type: 'success',
+        layout: 'bottomLeft',
+        text: notification.name + notification.message
+      });
+      //pusti audio sempl, okacen je u app.blade.php layoutu
+      document.getElementById("noty_audio").play()
+      console.log(notification)	
+    })
+}	
+U app.blade.php layoutu pravimo <audio> element u kom ce biti okaceni ovi samplovi(3 ih je zbog kompatibilnosti sa brauzerima inace je 
+-jedan sempl u sustini) i taj element ce pustatai listen() metod - document.getElementById("noty_audio").play()
+I sada kad neko nekog doda za prijatelja stize notifikacija sa pusera koju ce sada prikazati noty paket i cuce se zvucni signal isto -
+-kad neko prihvati nekog za prijatelja stize notifikacija koju ce prikazati noty i cuje se zvucni signal
+Naravno posto sada koristimo 'jobs' tabelu moramo pre svega dati komandu 'php artisan queue:work'
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 29 - Social network in Laravel 5.3 and Vuejs 2.0 #29 Installing vuex into laravel
+Link - https://www.youtube.com/watch?v=oJp6v9Sedkg&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=29
+Sada cemo instalirati vuex library, nije mi jos uvek jasno cemu sluzi, komandom "npm install vuex", zatim u folderu  -
+- 'socnetwork2/resources/assets/js' pravimo fajl store.js
+U tom fajlu psemo 
+import Vuex from 'vuex'
+import Vue from 'vue'
+Vue.use(Vuex)
+export const store = new Vuex.Store({
+  state: {
+  	auth: false
+  }	
+})
+Onda u app.js iz 'socnetwork2/resources/assets/js' registrujemo taj fajl - import { store } from './store' i u const app dodajemo store
+const app = new Vue({
+    el: '#app',
+    store
+});
+opet radimo komandu "npm run dev" da iskompajlira sve ovo i sada kad u brauzeru otvorimo vue konzolu i kliknemo ikon u Vuex pisace nam
+-da j definisana nova varijabla(ili constanta ili sta vec...) auth i da je njena vrednost false
+Nije mi ovo nista jasno ni cemu sluzi ...
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 30 - Social network in Laravel 5.3 and Vuejs 2.0 #30 Understanding vuex
+Link - https://www.youtube.com/watch?v=mZEIAc639wQ&index=30&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+Ovde je on sad nesto objasnjavao oko Vuex-a u aplikaciji i kao imacemo getters, mutation-e i actione itd.. nista ne kontam...
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 31 - Social network in Laravel 5.3 and Vuejs 2.0 #31 User unread notifications with vuex store
+Link - https://www.youtube.com/watch?v=dcNMEIWklQg&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=31
+U folderu 'socnetwork2/resources/assets/js/components' pravimo novu komponentu UnreadNots.vue koja ce ako dobro shvatam prikazivati nep
+-rocitane notifikacije useru koji je trebao da ih primi, zatim je registrujemo u app.js iz'socnetwork2/resources/assets/js' - 
+-Vue.component('unread', require('./components/UnreadNots.vue'));
+Za sada u <template> elementu u komponenti UnreadNots.vue pravim o da prikazuje hardkodovano da kao ima 7 neprocitanih notifikacija i -
+-kacimo je u layout app.blade.php u navbaru pored linka MyProfile - <unread></unread>
+Za sada pravimo u UnreadNots.vue da da u mounted() pozove metod get_unread() koji pravimo u methods sekciji koji salje AJAX ruti -
+-get_unread koja je za sada closure i koja vraca neprocitane notifikacije usera koji je pozvao rutu iz 'notifications' tabele tj one -
+-redove kojima je notifiable_id kolona jednaka id-u ulogoanog usera a kolona read_at NULL, komponenta UnreadNots.vue
+<script>
+  export default {
+    mounted(){
+      //pozivamo metod get_unread() koji je napravljen u methods sekciji koji salje AJAX i dobija broj neprocitanih notifikacija usera
+      this.get_unread()
+    },
+    methods: {
+    // metod za sada salje AJAX ruti get_unread koja ce vratiti neprocitane notifikacije trenutno ulogovanog usera iz notifications 
+    // tabele tj one kojimea je read_at kolona == NULL i zatim ih console.logujemo
+    get_unread(){
+  	 this.$http.get('/get_unread')
+  	     .then((nots) => {
+  	        console.log(nots)	
+  	     })	
+    }	
+  } 
+}	
+</script>
+Ruta get_unread
+//ruta za sada sama vadi iz 'notifications' tabele notifikacije za usera koji je trenutno ulogovan a koje su neprocitane koristeci
+//laravelov metod unreadNotifications
+Route::get('get_unread', function(){
+  return Auth::user()->unreadNotifications;
+});
+Kasnije cemo ako sam dobro shvatio ove notifikacije koje ovde dobijamo slati u store.js fajl i one ce odatle, ako sam dobro shvatio, -
+-biti dostupne i drugim komponentama
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 32 - Social network in Laravel 5.3 and Vuejs 2.0 #32 Vuex mutations
+Link - https://www.youtube.com/watch?v=l1cRhxrg5_c&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=32
+Sada u store.js iz 'socnetwork2/resources/assets/js' pravimo sekciju mutators i u njoj metod ili mutator add_not() u kom cemo u array
+-nots[] ubacivati neprocitane notifikacije koje ce slati get_unread() metod UnreadNots.vue komponente, mutations sekcija iz store.js
+mutations: {
+//ovde u array nots[] ubacujemo notifikacije tj not koji dolazi iz get_unread() metoda UnreadNots.vue komponente, kao argumente prima-
+//-state u kom je array nots[] u koji treba pushovati ono sto stigne iz get_unread() metoda UnreadNots.vue komponente i not a to ce 
+//biti jedna neprocitana notifikacija posto ce get_unread() iz UnreadNots.vue iterirati kroz vracene neprocitane notifikacije i jednu
+//po jednu ih slati ovde
+  add_not(state, not) {
+    state.nots.push(not)
+  }
+}
+Takodje menjamo get_unread() metod UnreadNots.vue komponente koji je do sada logovao u konzolu ono sto dobije ud rute get_unread a sad
+-ce u foreach petlji ici kroz ono sto dobije i jednu po jednu neprocitanu notifikaciju slati u store.js tj u add_not() mutator
+get_unread(){
+  this.$http.get('/get_unread')
+    .then((nots) => {
+      //neprocitane notifikacije se nalaze u nots.body objektu i ovde iteriramo kroz njih i saljemo ih u add_not() metod tj mutat-
+      //-or u store.js koji ce ih ubaciti u nots[] array 
+      nots.body.forEach( (not) => {
+  	this.$store.commit('add_not', not)
+      })
+    })	
+}	
+Sada u store.js pravimo sekciju getters i u njoj ce biti metodi all_nots() koja ce vracati notes[] array i all_nots_count() koja ce vr-
+-acati duzinu store[] arraya, ovaj drugi metod cemo koristiti u UnreadNots.vue da prikazemo koliko user ima neprocitanih notifikacija
+getters: {
+  //ovaj getter vraca nots[] iz state sekcije onom ko ga pozove
+  all_nots(state){
+    return state.nots
+  },
+  //ovaj getter vraca broj notifikacija u nots[] tj nots.length onom ko ga pozove
+  all_nots_count(state){
+    return state.nots.length
+  }
+},
+Sada cemo u UnreadNots.vue pozvati getter all_nots_count iz store.js da bi u <template> iz UnreadNots.vue prikazali broj neprocitanih-
+-notifikacija ulogovanog usera, pravimo sekciju computed u UnreadNots.vue i u njoj metod all_nots_count() koji ce pozivati getter -
+-all_nots_count iz store.js
+computed: {
+  //ovaj computed property poziva all_nots_count() getter iz store.js da mu vrati broj neprocitanih notifikacija ulogovanog user
+  all_nots_count(){
+    return this.$store.getters.all_nots_count
+  }	
+} 
+i sada u <template> pozivamo ovaj compute property da prikaze broj neprocitanih notifikacija
+<template>
+  <li>
+    <a href="/notifications">
+      Unread Notifications
+      <!-- pozivamo all_nots_count computed property koji od all_nots_count gettera iz store.js dobija broj neprocitanih notifikacija
+  	   ulogovanog usera tj duzinu arraya nots[] u kom su neprocitane notifikacije ovog usera -->
+      <span class="badge">{{ all_nots_count }}</span>	
+    </a>
+  </li>	
+</template>
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 33 - Social network in Laravel 5.3 and Vuejs 2.0 #33 updating notifications count in real time with vuex
+Link - https://www.youtube.com/watch?v=NM3U5QZapqY&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=33
+Sada pravimo da se dinamicno cim nam stigne neka notifikacija tj bude upisan red u 'notifications' tabelu poveca broj koji prikazuje -
+-unread notifications, a to radimo tako sto u listen() metodu Notification.vue komponente posle pozivanja noty paketa koji prikazuje -
+-notifikaciju koja stize preko pusher.com pozivamo add_not() mutator store.js-a i saljemo mu notifikaciju kao argument da je ubaci u -
+-nots[] array
+listen(){
+  Echo.private('App.User.' + this.id)
+    .notification( (notification) => {
+      noty({
+        type: 'success',
+        layout: 'bottomLeft',
+        text: notification.name + notification.message
+      })
+      //ovde da bi bilo dinamicno tj da bi odmah useru povecali broj neprocitanih notifikacija pozivamo metod tj mutator add_not iz 
+      //store.js i sljemo mu notification kao argment da ga ubaci u nots[] array
+      this.$store.commit('add_not', notification)
+      //pusti audio sempl, okacen je u app.blade.php layoutu
+      document.getElementById("noty_audio").play()
+   })
+}	
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 34 - Social network in Laravel 5.3 and Vuejs 2.0 #34 Displaying notifications from database
+Link - https://www.youtube.com/watch?v=PTdD9Y0eKd0&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=34
+Sada cemo napraviti prikaz neprocitanih notifikacija kad se klikne link koji prikazuje broj neprocitanih notifikacija koji smo napravi-
+-li u prethodnim lekcijama, taj link je u UnreadNots.vue komponenti u <template> a tu komponentu kaci layout app.blade.php i za sada -
+-taj link samo prikazuje broj neprocitanih notifikacija koji dobija od all_nots_count() computed property-a iste komponente
+prvo pravimo vju nots.blade.php u 'socnetwork2/resources/views', pravimo rutu /notifications koja ce gadj-
+-ati metod notifications() koji cemo napraviti u HomeController.php
+//metod gadja notifications() iz HomeController.php koji vadi sve neprocitane notifikacije nekog usera i prikazuje ih u nots.blade.php
+Route::get('/notifications', [
+    'uses' => 'HomeController@notifications',
+    'as' => 'notifications'
+]);
+U HomeContoller pravimo metod notifications(), na vrhu kontrolera moramo uvesti Auth klasu - use Auth;
+//metod poziva ruta /notifications da neprocitane notifikacije usera koji je pozvao metod pretvori u procitane i da izvuce sve notifi-
+//kacije tog usera i da ih posalje u vju nots.blade.php da mu budu prikazane 
+public function notifications(){
+  //sve neprocitane notifikacije trenutno ulogovanog usera iz 'notifications' tabele pretvaramo u procitane tj kolonu read_at menjamo-
+  //-iz null u datum
+  Auth::user()->unreadNotifications->markAsRead();
+  //vadimo sve notifikacije trenutno ulogovanog usera i saljemo ih u vju nots.blade.php da ih prikaze
+  return view('nots')->with('nots', Auth::user()->notifications);        
+}
+I sada dodajemo u nots.blade.php da iterira kroz $nots koji mu salje notifications() iz HomeControllera i da prikaze te notifikacje, -
+-nista novo pogledaj vju zakomentarisano je 
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 35 - Social network in Laravel 5.3 and Vuejs 2.0 #35 Posts table and vue component
+Link - https://www.youtube.com/watch?v=0yFBcciwUhE&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=35
+Sada cemo dati userima mogucnost da pisu postove za to ce nam trebati 'posts' tabela tako da pravimo model Post.php i migraciju za tabe-
+-lu 'posts' komandom "php artisan make:model Post -m", za sada u migraciju dodajemo kolone content i user_id
+Schema::create('posts', function (Blueprint $table) {
+  $table->increments('id');
+  $table->integer('user_id');
+  $table->text('content');
+  $table->timestamps();
+});
+U Post.php modelu pravimo fillable array i metod user() koji pravi relaciju sa User.php modelom tj 'users' tabelom
+//fillable array za 'posts' tabelu
+protected $fillable = ['content', 'user_id'];	
+//one-to-many relacija sa 'users' tabelom posto jedan user moze imati vise postova
+public function user(){
+  return $this->belongsTo('App\User');
+}
+Takodje u User.php modelu pravimo metod posts() da bi i preko usera mogli da vadimo postove iz 'posts' tabele
+//one-to-many relacija sa 'posts' tabelom posto jedan user ima vise postova(ako hoce)
+public function posts(){
+  return $this->hasMany('App\Post');  
+}
+U 'socnetwork2/resources/assets/js/components' pravimo komponentu Post.vue koja ce sluziti za kreiranje postva ako sam dobro razumeo
+U njenom <templat> elementu dodajemo <textarea> i <button> za submit i regisstrujemo je u app.js iz
+ - 'socnetwork2/resources/assets/js/components' 
+//ovde registrujemo komponentu Post.vue iz 'socnetwork2/resources/assets/js/components'
+Vue.component('post', require('./components/Post.vue'));
+Komponentu ce kaciti home.blade.php vju koji smo dobili kad smo na pocetku tutorijal napravili autentifikaciju tako da cemo sve u home.
+blade.php zakometarisati i u @section('content') samo ubaciti <post></post> - 
+@extends('layouts.app')
+@section('content')
+  <post></post>
+@endsection
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 36 - Social network in Laravel 5.3 and Vuejs 2.0 #36 Creating posts with vue components
+Link - https://www.youtube.com/watch?v=STr8k5JzWbQ&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=36
+Sada u Post.vue komponenti nastavljamo rad na postovima prvo u <textarea> bajndujemo varijablu content koj cemo definisati u data() i-
+-takodje u <button> ubacujemo :disabled koji je vezan na not_working varijablu koja je po difoltu true tako da je u startu button disej
+-blovan,
+<textarea rows="5" class="form-control" v-model="content"></textarea>
+<button class="btn btn-success pull-right" :disabled="not_working">Create a post</button>
+data sekcija
+data() {
+  return {
+    content: '',
+    not_working: true
+  }
+}
+Zatim u watch sekciji pravimo content() metod ili sta vec... koji kad krene user da kuca u textarea tj promeni se duzina content varija-
+-ble koja je bajndovana sa textarea-om menja se vrednost not_working u false tako da button nije vise disejblovan i moze se submitovati
+watch: {
+  content() {
+    if(this.content.length > 0)
+      this.not_working = false
+    else
+      this.not_working = true   
+  }
+} 	
+Sada cemo napraviti u methods sekciji u Post.vue metod create_post() i u <button> dodati da ga poziva na click event ali prvo komandom-
+- "php artisan make:controller PostsController" pravimo kontroler koji ce primati AJAX iz create_post() metoda Post.vue komponente
+I za sada u njemu pravimo metod store() koji ce samo vracati ono sto mu je stiglo da proverimo da li prolai AJAX preko rute post/create
+ruta
+Route::post('/create/post', [
+    'uses' => 'PostsController@store'
+]);
+store() metod PostsControllera
+public function store(Request $request){
+  return $request->all();
+}
+u Post.vue vezujemo click event <button>-a na metod create_post()
+<!--klik event na button j vezan sa create_post() metodom koji salje AJAX store() metodu PostsControllera koji upisuje post
+    u 'posts' tabelu-->
+<button class="btn btn-success pull-right" :disabled="not_working" @click="create_post()">
+  Create a post
+</button>
+Ovo je za sada create_post() metod Post.vue komponente
+methods: {
+  //metod koji salje AJAX store() metodu PostsControllera koji ce upisati post u 'posts' tabelu preko rute /post/create
+  create_post(){
+    //saljemo AJAX na rutu /create/post sa userovim unosom u <textarea> tj saljemo content varijablu
+    this.$http.post('/create/post', { content: this.content })
+        // kad stigne odgovor od store() metoda PostsControllera
+        .then((resp) => {
+          // praznimo content varijablu tj <textarea> posto su bajndovani
+          this.content = ''
+          //izbacujemo useru noty poruku da je uspesno uneo post
+          noty({
+                type: 'success',
+                layout: 'bottomLeft',
+                text: 'Your post has been published!'
+          })
+          console.log(resp)  
+        })
+  }
+},
+Za sada jos uvek nista ne upisujemo u 'posts' tabelu koju jos nismo ni migrirali ali AJAX stize do store()metoda preko rute/post/create
+NAPOMENA - resio sam problem sa loginom posto je Notification.vue i pre logina trazio da se da vrednost id varijabli a to je bilo nemo-
+-guce posto niko nije bio ulogovan pa je vracao error i sjebavalo je login itd tako da sam u app.blade.php koji kaci ovu komponentu reko
+@if(Auth::check())
+  <notification :id="{{ Auth::id() }}"></notification>
+@endif
+Tako da ako user nije ulogovan tj Auth::check() vraca FALSE nece ni kacti komponentu
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 37 - Social network in Laravel 5.3 and Vuejs 2.0 #37 Creating posts in laravel
+Link - https://www.youtube.com/watch?v=B7cxAfmI8jw&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=37
+Sada migriramo miraciju za 'posts' tabelu koju smo napravili pre par lekcija komandom "php artisan migrate" i doradjujemo store() metod
+-PostsControllera da upise post u tabelu 'posts', prvo u kontroler uvozimo model Post.php i Auth fasadu 
+use Auth;
+use App\Post;
+I zavrsavamo metod store() PostsControllera
+//metodu preko rute /post/create stize AJAX iz Post.vue komponente kad se klikne button ispod textarea i stize userov unos u textarea
+// tj varijabla content
+public function store(Request $request){
+  //upisujemo red u 'posts' tabelu tj kolone content sa userovim unosom i user_id gde upisujemo id trenutno ulogovanog usera
+  return Post::create([
+    'user_id' => Auth::id(),
+    'content' => $request->content	
+  ]);
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 38 - Social network in Laravel 5.3 and Vuejs 2.0 #38 Creating the Feed.vue component
+Link - https://www.youtube.com/watch?v=hlcamm4-7v0&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=38
+Sada cemo praviti komponentu Feed.vue koja ce ako sam ga dobro shvatio prikazivat nase postove i obavestavati nase prijatelje da smo ne
+-sto postovali i valjda nas kad oni nesto postuju itd tako da u 'socnetwork2/resources/assets/js/components' pravimo fajl Feed.vue i -
+-registrujemo ga u app.js iz 'socnetwork2/resources/assets/js', u komponenti za sada hardkodujemo kako ce izgledati u <template> - u
+Znaci prikazivace ime usera i ispod valjda njegove postove itd kacimo je u home.blade.php ispod <post> komponente dodajemo <feed> koji 
+-kaci Feed.vue za sada je sve samo proba pa i nisam mnogo ni zakomentarisao posto ce se sve ovo menjati...
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 39 - Social network in Laravel 5.3 and Vuejs 2.0 #39 Create a user news feed in laravel
+Link - https://www.youtube.com/watch?v=SeoJl5dXhH0&index=39&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+Sada prvo komandom "php artisan make:controller FeedsController" pravimo FeedsController.php koji ce valjda slati podatke Feed.vue kom-
+-ponenti, u njega odmah na vrhu uvozimo User.php i Post.php modele i Auth fasadu
+use Auth;
+use App\User;
+use App\Post;
+Pravimo metod feed() koji izvlaci sve postove prijatelja trenutno ulogovanog usera i zatim njihove postove vraca AjAX-u koji je poslao-
+-get_feed() metod Feed.vue komponente
+//metod poziva get_feed() metod Feed.vue komponente preko rute '/feed' da izvuce sve postove prijatelja trenutno ulogovanog usera
+public function feed(){
+  //koristeci friends() metod traita Friendable.php prvo vadimo sve prijatelje trenutno ulogovanog usera(metod vraca array)
+  $friends = Auth::user()->friends();
+  //pravimo array u koji cemo ubaciti postove prijatelja
+  $feed = array();
+  //iteriramo kroz array $friends u kom su prijatelji i koresteci posts() metod User.php modela iteriramo kroz postove svakog 
+  //prijatelja zasebno i svaki post svakog prijatelja push-ujemo u array $feed
+  foreach($friends as $friend){
+    foreach ($friend->posts as $post){
+      array_push($feed, $post);
+    }	
+  }  
+  //
+  return $feed;
+}	
+pravimo rutu '/feed' koja ce gadjati ovaj metod
+Route::get('/feed', [
+    'uses' => 'FeedsController@feed',
+    'as' => 'feed'
+]);
+U Feed.vue komponenti u sekciji mounted() pozivamo metod get_feed() koji cemo napraviti a koji ce pozivati feed() metod FeedsControllera
+pravimo u store.js iz 'socnetwork2/resources/assets/js'u state sekciji array posts[] i sada cemo takodje u store.js fajlu u mutations-
+-sekciji napraviti mutator add_post() koji ce postove koje cemo slati iz Feed.vue komponente tj njenog metoda get_feed() ubacivati u -
+-array posts[] koji ce opet prikazivati Feed.vue komponenta, nije mi jasno zasto moramo da saljemo sve u store.js kad ga ionako ova -
+-komponenta prikazuje... mutator add_post iz store.js iz 'socnetwork2/resources/assets/js':
+//ovde u array posts[] ubacujemo postove prijatelja trenutno ulogovanog usera koje vraca feed() metod FeedsControllera tj metod get_fe
+//ed Feed.vue komponente kad mu stigne odgovor na AJAX iterira kroz ono sto je stiglo i svaki post zasebno salje ovde da bude ubacen u 
+//posts[] array
+add_post(state, post){
+  state.posts.push(post)
+}
+get_feed() metod Feed.vue komponente za sada izgleda ovako
+//metod salje AJAX feed() metodu FeedsControllera da izvuce sve postove prijatelja trenutno ulogovanog usera i zatim iterira kroz vra-
+//ceni array i svaki post zasebno salje u store.js u add_post() mutator da bude ubacen u posts[] array
+get_feed(){
+  this.$http.get('/feed')
+    .then((response) => {
+      console.log(response)
+      //iteriramo kroz vracene postove iz feed() metoda FeedsControllera i svaki saljemo u mutator add_post() iz store.js da ga uba-
+      //-ci u array posts[]
+      response.body.forEach((post) => {
+        this.$store.commit('add_post', post)
+      })
+    })
+}
+za sada postove koje vraca feed() metod FeedsControllera vidimo samo u konzoli posto sam ih console.log-ovao i u Vue konzoli kad se -
+-ode na Vuex link u state: sekciji ima array posts[] u kom su postovi koje vraca FeedsController a u sledecoj lekciji radicemo na pri-
+-kazu tih postova pomocu Feed.vue komponente tj u njenom <template> - u
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 40 - Social network in Laravel 5.3 and Vuejs 2.0 #40 The avatar accessor, and eager loading user data.
+Link - https://www.youtube.com/watch?v=TzMysp74nyE&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=40
+posto uz ove postove ne dolazi koji ih je user kreirao zapravo dolazi samo njegov id sada cemo raditi na tome da i podatci usera dodju-
+-a u sledecoj lekciji cemo ih prikazivati, ovo se ako dobro shvatam zove eager loading
+ovo dodajemo na vrhu Post.php modela
+//u ovom public property-u upisujemo user i time govorimo aplikaciji da kad god izvlaci postove da sa svakim izvuce podatke usera koji 
+// ih je kreirao iz 'users' tabele
+public $with = ['user'];
+i sada kad odemo na URL socnetwork2.dev/feed u svakom post pod user: ce pisat svi podatci usera a to nam treba da bi u Feed.vue mogli -
+-da pored posta stavimo avatar usera koji je kreirao post
+sada u User.php modelu pravimo metod tj accessor koji ce menjati avatar kolonu 'users' tabele
+//ovo je accessor
+public function getAvatarAttribute($avatar){
+  return asset(Storage::url($avatar));  
+}
+posto smo promenili nacin kako nam vraca avatar kolonu 'users' tabele sada u profile.blade.php vjuu moramo promeniti kako nam prikaz-
+uje avatar pisalo je ovo <img src="{{ Storage::url($user->avatar) }}" width="70px" height="70px" style="border-radius: 50%;"> a sada -
+- ga prepravljamo u ovo  <img src="{{ $user->avatar }}" width="70px" height="70px" style="border-radius: 50%;">
+posto accessor getAvatarAttribue dodaje koloni avatar 'users' tabele http://socnetwork2.dev/storage/ pre samog imena fajla tj slike 
+u sledecoj lekciji rad na prikazu postova u Feed.vue komponenti
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 41 - Social network in Laravel 5.3 and Vuejs 2.0 #41 Displaying user feed using vuejs
+Link - https://www.youtube.com/watch?v=tFNLMT6O9OA&index=41&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+U store.js iz 'socnetwork2/resources/assets/js' pravimo getter all_posts() koji vraca posts[] array u kom su svi postovi prijatelja -
+-trenutno ulogovanog usera a napravio ga je mutator add_posts() istog fajla
+//ovaj getter vraca posts[] array u kom su postovi prijatelja trenutno ulogovanog usera
+all_posts(){
+  return state.posts   
+}
+Zatim u Feed.vue komponenti pravimo computed property posts() u computed sekciji koji poziva getter all_posts iz store.js koji vraca -
+-posts[] array u kom su svi postovi i pored svakog posta i user koji ga je kreirao
+//pozivamo getter all_posts() iz store.js da nam posalje array posts[] u kom su svi postovi koje je vratio feed() iz FeedsControllera-
+//i onda cemo u <template> - u iterirati kroz posts array i prikazati svaki post i njegovog kreatora
+posts(){
+  return this.$store.getters.all_posts
+}
+za sada u <template> u Feed.vue prikazujemo samo ime kreatora posta i content posta	
+<!--iteriramo kroz posts[] array koji stize kad compued propertu posts() pozove all_posts getter iz store.js i prikazujemo postove
+    i njihove kreatore-->
+<div class="panel panel-default" v-for="post in posts">
+  <div class="panel-heading">
+    {{ post.user.name }}
+  </div>
+  <div class="panel-body">
+    <p class="text-center">
+      {{ post.content }}	
+    </p>
+  </div>	
+</div>
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 42 - Social network in Laravel 5.3 and Vuejs 2.0 #42 Displaying user avatar and timestamps
+Link - https://www.youtube.com/watch?v=oUyLQYzBsEM&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=42
+Samo dodajemo u <template> u Feed.vue komponenti da prikaze sliku tj avatar usera i datum kreiranja posta za svaki post, ja dodo i link
+ka profilu usera ciji post gledamo tj slika i ime usera su link
+<!--iteriramo kroz posts[] array koji stize kad compued propertu posts() pozove all_posts getter iz store.js i prikazujemo postove
+    i njihove kreatore-->
+<div class="panel panel-default" v-for="post in posts">
+  <div class="panel-heading">
+    <!--ja dodo link ka profilu usera ciji je post-->
+    <a :href="'/profile/' + post.user.slug" target="blank">
+      <!-- avatar usera koji je kreirao post -->
+      <img :src="post.user.avatar" width="40px" height="40px" class="avatar-feed">
+      <!-- ime usera koji je kreirao post -->
+      {{ post.user.name }}
+    </a> 
+    <!-- vreme kreiranja posta -->
+    <span class="pull-right">{{ post.created_at }}</span>
+  </div>
+  <div class="panel-body">
+    <!-- sadrzaj tj content posta -->  
+    <p class="text-center">{{ post.content }}</p>
+  </div>	
+</div>	
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 43 - Social network in Laravel 5.3 and Vuejs 2.0 #42 Displaying user avatar and timestamps
+Link - https://www.youtube.com/watch?v=oUyLQYzBsEM&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=42
+Sada pravimo funkcionalnost lajkovanja postova
+Prvo pravimo model Like.php i migraciju za 'likes' tabelu komandom "php artisan make:model Like -m", u migraciju dodajemo polja user_id
+-i post_id tj koji je user lajkovao koji post
+public function up(){
+  Schema::create('likes', function (Blueprint $table) {
+    $table->increments('id');
+    $table->integer('user_id');
+    $table->integer('post_id');
+    $table->timestamps();
+  });
+}
+U Like.php modelu pravimo relaciju sa 'posts' tabelom
+//one-to-many relacija izmedju 'likes' i 'posts' tabela posto post moze imati vise lajkova a lajk moze pripadati samo jednom postu
+public function post(){
+  return $this->belongsTo('App\Post');
+}
+Takodje u Post.php modelu pravimo inverznu relaciju
+//relacija sa 'likes' tabelom
+public function likes(){
+  return $this->hasMany('App\Like');
+}
+onda u Like.php pravimo relaciju sa 'users' tabelom
+//one-to-many relacija sa 'users' tabelom posto user pravi lajkove i moze ih imati vise a jedan lajk pripada samo jednom useru
+public function user(){
+  return $this->belongsTo('App\User');
+}
+i onda migriramo komandom "php artisan migrate"
+Sada pravimo probu kako ce ovo izgledati tako sto u <template> u Feed.vue dodajemo btn 'Like post' i ispod dodajemo hardkodovane slike
+-usera ali to treba da bude dinamicno tako da tu budu slike usera koji su lajkovali post
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 44 - Social network in Laravel 5.3 and Vuejs 2.0 #44 eager loading likes and users
+Link - https://www.youtube.com/watch?v=amsnFRcTvMQ&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=44
+Rucno dodajemo u 'likes' tabelu par redova kao da su neki useri lajovali neke postove...
+Sada cemo u Post.php modelu dodati da eager loaduje i lajkove posta kao sto smo dodali da sa postom ucitava i usera koji ga je kreirao
+to radimo u $with public property-u Post.php modela
+public $with = ['user', 'likes'];
+Zatim u Like.php modelu radimo to isto za usere tj kad god izvlacimo lajkove iz 'likes' tabele izvuci ce sa svakim lajkom i podatke use
+-ra koji je dodao taj lajk i tako cemo imati mogucnost da u Feed.vue komponenti ispod posta prikazemo avatare usera koji su lajkovali-
+-odredjeni post, tako da u Like.php na vrhu pisemo
+public $with = ['user'];
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 45 - Social network in Laravel 5.3 and Vuejs 2.0 #45 Child components in vuejs - Like.vue component
+Link - https://www.youtube.com/watch?v=DvuDj2ccHMg&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=45
+Sada je ovaj izgleda odlucio da lajkovi budu u zasebnoj komponenti tako da pravimo komponentu Like.vue u 'socnetwork2/resources/asset-
+- s/js/components' koja ce kako kaze biti child komponenta Feed.vue komponente, da bismo to uradili u <template> u Feed.vue ispod pri-
+-kaza sadrzaja posta kacimo Like.vue - <like></like> i u <script> importujemo like.vue - import Like from './Like.vue' takodje ispod-
+-mounted() pravimo sekciju components u kojoj navodimo Like komponentu
+components: {
+  Like
+},
+U Like.vue komponenti pravimo <template> u kom su za sada Like i Unlike btn-i i takodje pravimo <p> koji za sada nista ne prikazuje a -
+- koji ce prikazivati avatare usera koji su lajkovali post, takodje prepravljamo u Fedd.vue <like> tj kad kacimo Like.vue kompoentu -
+-slacemo joj properti id posta koji se trenutno prikazuje da bi Like.vue znala koji je post u iteraciji(posto se poziva za svaki pose-
+-bno) i da izvuce njegove lajkove iz store.js posto je tamo sve upisano sto stigne iz feed() metoda FeedsControllera a posto smo name-
+-stili eager loading sada ce sa svakim postom stizati lajkovi a sa svakim lajkom podatci usera koji je dodao taj lajk a to nam treba,
+u props u Like.vue navodimo id kao property
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 46 - Social network in Laravel 5.3 and Vuejs 2.0 #46 Finding post from vuex store
+Link - https://www.youtube.com/watch?v=L3cyjTyAhpk&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=46
+U Like.vue komponenti pravimo computed sekciju i u njoj metod post() koji (nije mi bas jasno kako) vadi iz store.js post koji je u -
+-Feed.vue trenutno u iteraciji i ciji je id stigao kad je Feed.vue pozvao Like.vue 
+computed: {
+  post(){
+    return this.$store.state.posts.find((post) => {
+      return post.id === this.id
+    })      
+  }
+}
+I sada u <template> iteriramo kroz lajkove posta koji smo izvukli u computed property-u post() i ako ih ima prikazujemo ih 
+<!--iteriramo kroz lajkove posta koji se trenutno prikazuje u Feed.vue(koji smo izvukli iz store.js u computed property-u post()) i ako ih ima prikazujemo ih-->
+<span class="text-center plava" v-for="like in post.likes">
+  <!-- ja dodo da ovo budu linkovi ka prfilima usera koji su lajkovali post -->
+  <a :href="'/profile/' + like.user.slug" target="blank">
+    <!--prikazujemo avatar usera koji su lajkovali post ciji je id poslal Feed.vue komponenta kad je pozvala Like.vue-->
+    <img :src="like.user.avatar" width="40px" height="40px" class="avatar-like" :title="like.user.name">      
+  </a> 
+</span>   
+Takodje sam dodo u Feed.vue u liniji pre pozivanja Like.vue komponente da proveri dali post ima uopste lajkove i ako ih ima stampa jed-
+-an text a ako nema drugi
+<!--ja dodo da ako post ima lajkova tj ako je post.likes vece od 0 stampa ovo-->
+<p v-if="post.likes.length > 0">People who liked this post:</p>
+<!--ja dodo a ako nema stampa ovo-->
+<p v-else>Nobody likked this post...</p>
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 47 - Social network in Laravel 5.3 and Vuejs 2.0 #47 Init.vue component
+Link - https://www.youtube.com/watch?v=MJplEIFxwmk&index=47&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+U folderu 'socnetwork2/resources/assets/js/components' pravimo komponentu Init.vue i registrujemo je u  app.js iz 'socnetwork2/resorc-
+-es/assets/js' - Vue.component('init', require('./components/Init.vue')); i kacimo je u app.blade.php na pocetak div-a #app
+ako sam dobro shvatio u komponent ce biti podatci trenutno ulogovanog usera a to ce nam trebati recimo da vidimo da li je user lajkovao
+-neki post pa cemo u zavisnosti od toga u Like.vue da prikazemo btn Like ili Unlike
+U mounted() poivamo metod get_auth_user_data() koji pravimo u methods sekciji Init.vue komponente, taj metod ce slati AJAX ruti -
+-/get_auth_user_data koja ce samo vracati objekat trenutno ulogovanog usera Auth::user() i zatim cemo ono sto primimo slati u store.js
+-da upise to u auth_user{} koji definisemo u state sekciji u store.js koristeci mutator auth_user_data() koji cemo napraviti u store.js
+metod get_auth_user_data() iz Init.vue
+//metod sluzi da uzme podatke trenutno ulogovanog usera
+get_auth_user_data(){
+  //saljemo AJAX ruti /get_auth_user_data koja u closeure-u vraca Auth::usera() tj njegove podatke
+  this.$http.get('/get_auth_user_data')
+    .then((resp) => {
+      //ubacujemo vraceno u store.js u user_data objekat pozivajuci mutator auth_user_data
+      this.$store.commit('auth_user_data', resp.body)
+    })
+}	
+ruta /get_auth_user_data iz web.php
+//rutu poziva get_auth_user_data() metod Init.vue komponente da mu posalje poatke trenutno logovanog usera
+Route::get('/get_auth_user_data', function(){
+  return Auth::user();
+});
+mutator auth_user_data iz store.js
+//ovde ubacujemo u auth_user objekat ono sto nam posalje metod get_auth_user_data() iz Init.vue tj podatke trenutno ulogovanog usera
+auth_user_data(state, user){
+  state.auth_user = user
+}
+i sada kad se ulogujemo i odemo u developer tools na Vue link pa na Vuex link imamo u state odeljku objekat auth_user u kom su podat-
+-ci ulogovanog usera, mada i dalje tu nema podatak koje je ovaj user postove lajkovao, mozda ako se namesti eager loading u User.php
+-modelu da sa userom izvadi iz 'likes' tabele redove u kojima je id usera pa bi moglo da se vidi sta je user lajkovao...
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 48 - Social network in Laravel 5.3 and Vuejs 2.0 #48 Displaying post likes
+Link - https://www.youtube.com/watch?v=1AX6GIuL89U&index=48&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+U Like.vue komponenti pravimo computed property likers() koji ce u array likers[]ubaciti id-eve usera koji su lajkovali post koji komp-
+-onenta Like.vue trenutno prikazuje, 
+likers(){
+  //array u koji cemo ubaciti id-eve usera koji su lajkovali post koji je trenutno u iteraciji u Feed.vue i poslat je ovde na prikaz
+  var likers = []    
+  //iteriramo kroz like-ove posta i ubacujemo id usera koji su lajkovali post u array likers[]
+  this.post.likes.forEach((like) => {
+          likers.push(like.user.id)  
+  })      
+  return likers
+},
+Sada takodje u Like.vue komponenti pravimo novi computed property koji ce proveravat da li je id trenutno ulogovanog usera,koji imamo-
+-jer smo napravili Init.vue komponentu koja metodom get_auth_user_data() vadi trenutno ulogvanog usera i salje u store.js u objekat -
+-auth_user{}, u likers[] array-u u koji su upisani id-evi usera koji su lajkovali post koji se trenutno pr-
+-ikazuje u Feed.vue komponenti, taj com puted property ce ako je user lajkovao post tj ako ima njegovog id-a u likers[] arrayu dati vr-
+-ednost varijabli check_index true a ako ga nema false 
+auth_user_likes_post(){
+//ovde proveravamo da li u likers[] arrayu postoji id trenutno ulogovanog usera koji je u store.js upisan u auth_user.id, ako postoji-
+//vratice taj id tj to ce upisati u check_index varijablu a ako ga ne nadje u varijablu ce upisati -1
+  var check_index = this.likers.indexOf(
+    this.$store.state.auth_user.id    
+  )      
+  if(check_index === -1) // ako je check_index == -1 tj nema id trenutno ulogovanog usera medju onima koji su lajkovali post
+    return false
+  else // ako ima id trenutno ulogovanog usera madju onima koji su lajkovali post tj lajkovao je post
+    return true  
+},
+Sada cemo u button-ima za Like i Unlike koji su u <template> u Like.vue proveriti sta vraca ovaj computed property i u zavisnosti od to-
+-ga prikazati odgovarajuce dugme
+<!--ako user nije lajkovao post koji trenutno prikazuje Feed.vue tj computted property auth_user_likes_post vraca false-->
+<button class="btn btn-primary" v-if="!auth_user_likes_post">
+  Like this post      
+</button>      
+<!--ako je user lajkovao post koji trenutno prikazuje Feed.vue tj computted property auth_user_likes_post vraca true-->
+<button class="btn btn-danger" v-else>
+  Unlike this post      
+</button>
+Svi lajkovi do sada su rucno uneti u 'likes' tabelu ali u sledecoj lekciji bi trebao da pocne rad na Like i Unlike metodima
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 49 - Social network in Laravel 5.3 and Vuejs 2.0 #49 Creating the like and unlike methods
+Link - https://www.youtube.com/watch?v=Wa4malCdRxM&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=49
+Komandom "php artisan make:controller LikesController" pravimo kontroler koji cemo koristiti za upisivanje redova u 'likes' tabelu tj-
+-kad ulogovani user u home.blade.php tj u Like.vue komponenti klikne btn Like ispod nekog posta nekog prijatelja, na vrhu LikesContro-
+-llera uvozimo Like model - use App\Like; i Post model - use App\Post; i Auth facade - use Auth; i pravimo metod like() 
+//metod za upis reda u 'likes' tabelu tj kad neko u Like.vue klikne btn Like ispod nekog posta koji prikazuje Feed.vue komponenta, 
+//kao argument stize id posta
+public function like($id){
+  //nalazimo post koji je lajkovan(mada mislim da je ovo suvisno posto nam je stigao id posta kao argument a samo nam on treba za  
+  //post_id kolonu 'likes' tabele)
+  $post = Post::find($id);
+  //upisujemo red u 'likes' tabelu tj kolone user_id(trenutno ulogovani user) i post_id(id posta ciji je id stigao kao argument)
+  $like = Like::create([
+      'user_id' => Auth::id(),
+      'post_id' => $post->id	
+  ]);
+  //vracamo like koji je upisan u 'likes' tabelu a sa njim i usera koji a je napravio(to je moguce zbog eager loadinga)a taj 
+  //user nam treba da bi store.js mogao da upise sta treba u likes array
+  return Like::find($like->id);
+}
+Zatim takodje u LikesControlleru pravimo metod unlike() kad se kliken Unlike btn koji je napravljen u Like.vue komponenti
+//metod za brisanje reda iz 'likes' tabele kad neko ko je vec lajkovao neki post klikne Unlike btn ispod nekog posta koji prikazuje
+//Feed.vue komponenta, kao argument stize id posta
+public function unlike($id){
+  //nalazimo post u 'posts' tabeli po id-u koji je stigao kao argument(mada mislim da je ovo suvisno posto nam je stigao id posta kao  
+  //argument a samo nam on treba za post_id kolonu 'likes' tabele)
+  $post = Post::find($id);
+  //brisemo red u 'likes' tabeli gde je kolona user_id jednaka id-u ulogovanog usera a kolona post_id jednaka id-u posta koji je 
+  // stigao kao argumenat
+  $like = Like::where('user_id', Auth::id())
+  	      ->where('post_id', $post->id)
+  	      ->first();
+  //brisemo pronadjeni like
+  $like->delete();
+  return $like->id; //vracamo id obrisanog posta da bi komponenta mogla da ga odstrani iz DOM-a 
+}
+u web.php pravimo rute ka ovim metodima
+//ruta ka like() metodu LikesControllera kad se klikne Like btn koji pravi Like.vue komponenta ispod nekog posta koji prikazuje
+// Feed.vue metod zatim upisuje red u 'likes' tabelu
+Route::get('/like/{id}', [
+    'uses' => 'LikesController@like'
+]);
+
+//ruta ka unlike() metodu LikesControllera kad se klikne Unlike btn koji pravi Like.vue komponenta ispod nekog posta koji prikazuje 
+//Feed.vue, metod zatim brise red u 'likes' tabeli
+Route::get('/unlike/{id}', [
+    'uses' => 'LikesController@unlike'
+]);
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 50 - Social network in Laravel 5.3 and Vuejs 2.0 #50 Creating the likes method
+Link - https://www.youtube.com/watch?v=2wqzhuXIA7Y&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=50
+U Like i Unlike btn-ima u Like.vue dodajemo da na klik pozivaju istoimene metode koj cemo napraviti
+<button class="btn btn-primary btn-xs" v-if="!auth_user_likes_post" @click="like()">
+      Like this post      
+</button>      
+<button class="btn btn-danger btn-xs" v-else @click="like()">
+      Unlike this post      
+</button>
+Pravimo metod like() u methods sekciji Like.vue komponente koji ce slati AJAX like() metodu LikesControllera i zatim kad ovaj upise -
+-lajk i posalje like objekat sa sve userom slati to u mutator update_post_likes() koji cemo napraviti u store.js koji ce dodavati taj-
+-novi like posts[] arrayu tacnije posts.likes arrayu pa ce se user cim lajkuje post pojaviti ispod posta i znace da je lajk uspeo i ta-
+-kodje ce se btn promeniti iz Like u unlike, like() metod Like.vue komponente-
+//metod se poziva kad se klikne btn Like i salje AJAX like() metodu LikesControllera da upise red u 'likes' tabelu
+like(){
+  //saljemo AJAX preko rute /like/id i u ajaxu kao parametar id posta koji je stigao iz Feed.vue u props kad je pozvana Like.vue
+  this.$http.get('/like/' + this.id)
+    .then( (resp) => {
+      //pozivamo mutautor update_post_likes iz store.js koji ce u posts.likes dodati like koji smo upravo upisali tako da ce odmah
+      //biti prikazan i user koji je lajkvao post nedju ostalima koji su ga lajkovali posto sa lajkom stizu i podatci usera
+      this.$store.commit('update_post_likes', {
+        id: this.id, //saljemo mutatoru id posta koji je lajkovan
+        //saljemo mu takodje sta je vratio metod like() LikesControllera tj like iz 'likes' tabele sa userom iz 'users' tabele
+        like: resp.body
+      })
+      //pozivamo noty paket da izbaci na ekran notifikaciju da je upisan lajk u 'likes' tabelu
+      noty({
+        type: 'success',
+        layout: 'bottomLeft',
+        text: 'You successfully liked the post!'
+      })
+    })  
+}
+zatim u store.js pravimo mutator update_post_likes() koji kao sto smo rekli ubacuje u posts.likes novi like sa sve podatcima usera ko-
+-ji je lajkovao da bi i on bio prikazan ispod posta koji je lajkovao(ovi podatci stizu posto like() metod LikesControllera kad upise -
+-lajk nalazi u 'likes' tabeli lajk koji je upisao i vraca ga,a zbog eager loadinga sa lajkom se uvek vadi i user koji je dodao lajk-
+-tako da su nam dostupni njegovi podatci), mutator update_post_likes() iz store.js
+update_post_likes(state, payload){
+  //nalazimo post u posts[] arrayu po id koji je stigao 
+  var post = state.posts.find( (p) => {
+    return p.id === payload.id
+  })  
+  //sada ubacujemo lajk sa podatcima usera u posts[] array tj u post.likes(posto postovi imaju vise lajkova pa je ovo podarray)
+  post.likes.push(payload.like)
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 51 - Social network in Laravel 5.3 and Vuejs 2.0 #51 creating the unlikes method
+Link - https://www.youtube.com/watch?v=Anham4RDlbU&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=51
+Sada rad na unlike-ovanju postova koje smo vec lajkovali, prvo u Like.vue pravimo metod unlike() koji ce slati AJAX i unlike() metod -
+-LikesControllera koji ce brisati red iz 'likes' tabele po id-u posta koji salje unlike() iz Like.vue i id-u trenutno ulogovanog usera
+- i vracati id lajka koji je obrisan, zatim ce unlike() iz Like.vue pozivati mutator unlike_post() i slati mu id posta kom je skinut -
+-lajk i id samog lajka da ga obrise iz posts[] tj posts.likes, unlike() iz Like.vue komponente
+//poziva se kad se klikne btn Unlike i salje AJAX unlike() metodu LikesControllera da obrise red u 'likes' tabeli
+unlike(){
+  //saljemo AJAX preko rute /unlike/id i u ajaxu kao parametar id posta koji je stigao iz Feed.vue u props kad je pozvana Like.vue
+  this.$http.get('/unlike/' + this.id)
+    .then((response) => {
+    //pozivamo mutator unlike_post() store.js-a da obrise iz posts[] tj posts.likes lajk ciji je id stigao u responsu
+    this.$store.commit('unlike_post', {
+      //mutatoru saljemo id posta u kom je lajk koji je obrisan
+      post_id: this.id,
+      //saljemo i id samog lajka koji je vratio unlike() metod  LikesControllera
+      like_id: response.body
+    })
+    //pozivamo noty paket da izbaci na ekran notifikaciju da je izbrisan lajk u 'likes' tabeli
+    noty({
+      type: 'success',
+      layout: 'bottomLeft',
+      text: 'You successfully unliked the post!'
+    })
+  }) 
+}
+u store.js pravimo mutator unlike_post()
+//mutator kog poziva unlike() metod Like.vue da obrise iz posts[] tj iz posts.likes lajk koji je obrisan, u payload je id posta
+// (payload.post_id) i id lajka koji je obrisan kog je vratio unlike() iz LikesControllera(payload.like_id)
+unlike_post(state, payload){
+  //nalazimo post koji je neko unlikeovao
+  var post = state.posts.find((p) => {
+    return p.id === payload.post_id
+  })
+ //posto smo nasli post sada nalazimo njegov lajk kom id odgovara lajku koji je stigao izLike.vue tj iz unlike()metodaLikesControllera
+  var like = post.likes.find((l) => {
+    return l.id === payload.like_id
+  })
+  //nalazimo index lajka koji hocemo da obrisemo u post.likes
+  var index = post.likes.indexOf(like)
+  //koristeci splice secamo ga iz post.likes arraya
+  post.likes.splice(index, 1)
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 52 - Social network in Laravel 5.3 and Vuejs 2.0 #52 Sorting an array with PHP's USORT function
+Link - https://www.youtube.com/watch?v=ytK2c8iUh-A&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=52
+Sada cemo post nam FeedsController vraca postove koji nisu nikako orederovani posto ih vadi iz baze preko prijatelja ulogovanog usera-
+-orderovati koristeci usort() php metod, ali pre toga cemo izvuci i postove koje je napisao ulogovani user i njih takodje dodati u feed
+-koji prikazuje Feed.vue, ovako sada izgleda feed() metod FeedsControllera -
+//metod poziva get_feed() metod Feed.vue komponente preko rute '/feed' da izvuce sve postove prijatelja trenutno ulogovanog usera
+public function feed(){
+  //koristeci friends() metod traita Friendable.php prvo vadimo sve prijatelje trenutno ulogovanog usera(metod vraca array)
+  $friends = Auth::user()->friends();
+  //pravimo array u koji cemo ubaciti postove prijatelja
+  $feed = array();
+  //iteriramo kroz array $friends u kom su prijatelji i koresteci posts() metod User.php modela iteriramo kroz postove 
+  //svakog prijatelja zasebno i svaki post svakog prijatelja push-ujemo u array $feed
+  foreach($friends as $friend){
+    foreach ($friend->posts as $post){
+      array_push($feed, $post);
+    }	
+  }  
+  //vadimo takodje i postove trenutno ulogovanog usera i njih takodje ubacujemo u $feed array
+  foreach(Auth::user()->posts as $post){
+    array_push($feed, $post);	
+  }
+  //sortiramo $feed array usort() php funkcijom u kom su postovi ulogovanog usera i njegovih prijatelja po id koloni 'posts' tabele
+  usort($feed, function($p1, $p2){
+    return $p1->id < $p2->id;	
+  });
+  return $feed;
+}
+Tako su sada kad Feed.vue prikazuje postove oni sortirani po id koloni 'posts' tabele silazno tj oni sa vecim id prvi tj oni koji su
+-zadnji kreirani a takodje medju njima su i postovi koje je napravio ulogovani user tj moze videti svoje postove u feed-u
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 53 - Social network in Laravel 5.3 and Vuejs 2.0 #53 Creating user's table seeder
+Link - https://www.youtube.com/watch?v=WEV8p6mbDEw&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=53
+Sada on pravi gomilu usera pa je nesto menjao ModelFactory.php posto kad se kreira user kreira se i red u 'profiles' tabeli(pogledaj-
+-RegisterController koji smo menjali posto smo dodavali i kolone u 'users' tabelu a takodje pri registraciji tj kreiranju usera pravi-
+-se red i u profiles tabeli u kojoj pise lokacija usera i ima about kolonu koje user kasnije moze da popuni...) i sad on pravi seeder-
+- users i profiles tabele itd...
+mislim da ovo radi posto treba da radimo search 'users' tabele sa Laravel scout paketom u sledecim lekcijama
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 54 - Social network in Laravel 5.3 and Vuejs 2.0 #54 installation of Laravel scout and algolia driver
+Link - https://www.youtube.com/watch?v=RfopXIRF5w4&index=54&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+Sada cemo instalirati Laravel Scout paket a zatim cemo i to sranje Algoliu prvo komanda "composer require laravel/scout", ovo se moze-
+-naci na URL-u: https://laravel.com/docs/5.3/scout
+Znaci bilo je po obicaju problema sa ovom instalacijom naime scout 3.0 zahteva Laravel 5.4 a mi radimo u Laravelu 5.3 pa sam imao pro-
+-bleme iako sam prekopirao sa Gihuba composer.json od ovog lika sto drzi predavanja u kom je navedeno da skine scout 2.0 i pored toga-
+-je composer ponovo pokusavao da skine scout 3.0 pa sam pitao ovog sto predaje sta da radim i on je rekao da obrisem fajl composer.lock
+-koji je u root folderu aplikacije i da dam komandu "composer install"(fajl composer.lock sam prebacio u folder Vlada na desktopu)
+Tako da kad sam dao tu komandu mislim da je instalirao i scout i algolia posto je bilo navedeno u composer.json fajlu a i ispisao je-
+- Installing laravel/scout (v2.0.2)
+  Downloading: 100%         
+- Installing algolia/algoliasearch-client-php (1.17.0)
+  Downloading: 100%    
+Tako da se nadam da ce raditi...
+Nastavljam sa lekcijom, sada u app.php iz 'socnetwork2/config' u providers array upisujemo na dnu -
+- Laravel\Scout\ScoutServiceProvider::class,
+Posle ovoga je trebalo dati komandu "php artisan vendor:publish --provider="Laravel\Scout\ScoutServiceProvider"" ali i tu je bilo pro-
+-blema posto je fajl laravel.log iz 'socnetwork2/storage/logs' bio zakljucan pa sam bunario i nasao da obrisem posotjeci laravel.log-
+-fajl(prebacio sam ga u folder Vlada na desktopu' onda sam dao komandu "composer dump-autoload" i onda je odradio komandu publish koju-
+-sam gore vec naveo pa je uradio
+vlada@vlada-Lenovo-3000-N500:/opt/lampp/htdocs/socnetwork2$ php artisan vendor:publish --provider="Laravel\Scout\ScoutServiceProvider"
+Copied File [/vendor/laravel/scout/config/scout.php] To [/config/scout.php]
+Publishing complete for tag []!
+Zapravo je ovim samo u 'socnetwork2/config' folderu napravio fajl scout.php
+Sada sam na algolia.com napravio akaunt user-vladasarac@hotmail.com, pass-pikolo
+ovo dodajemo u .env
+//ovo je 'Application ID' sa API KEYS na algolia.com
+ALGOLIA_APP_ID=USM82GJUTB
+//ovo je 'Admin API Key' sa API KEYS na algolia.com
+ALGOLIA_SECRET=5d45df7600b4504a6e6703cb11ea5820
+Posto cemo pretrazivati 'users' tabelu tj koristicemo scout na User.php modelu na vrhu uvozimo scouta - use Laravel\Scout\Searchable;
+a na pocetku User klase pisemo: use Searchable;
+sada je isla komanda "composer require algolia/algoliasearch-client-php" ali nije nista instalirao posto mislim da kad sam mu posle -
+-promene composer.json fajla dao komandu "composer install" da je instalirao i algolia search clienta(nadam se...)
+Sada ide komanda "php artisan scout:import "App\User"" da bi scout importovao vec postojece podatke iz 'users' tabele i valjda poslao-
+-algolia.com-u, sada kad na algolia.com kliknemo link 'Indices' sa ikonom baze pokazuje nam da je zapravo prekopirao 'users' tablu sa -
+-svim podatcima na algolia.com i tamo je mozemo videti, takodje kad dodamo novog usera on ga automatski upise i tamo i vidljiv je ne -
+-znam kako ovo funkconise...
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 55 - Social network in Laravel 5.3 and Vuejs 2.0 #55 Algolia and vuejs working together
+Link - https://www.youtube.com/watch?v=rgDkk6NR9bY&index=55&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6
+Nastavljamo rad sa algolia.com, prvo cemo instalirati sta treba da bi mogli da koristimo algolia.com sa vue.js-om, idemo na link -
+-https://www.algolia.com/doc/api-client/javascript/getting-started/ i tamo je opisan postupak, prvo komanda
+ "npm install algoliasearch --save" i onda u folderu 'socnetwork2/resources/assets/js/components' pravimo komponentu Search.vue i reg-
+-istrujemo je u app.js iz 'socnetwork2/resources/assets/js' - Vue.component('search', require('./components/Search.vue'));
+U toj komponenti za sada u <template> pravimo search polje i ispod njega div u kom ce prkazivati rezultate pretrage 'users' tabele -
+-a u <script> sa algolia.com kopiramo sta treba tj inicijalizujemo klijenta...
+var algoliasearch = require('algoliasearch');
+//parametri su appid i appsecret iz .env fajla a njih sam skinuo sa dashboarda na algolia.com
+var client = algoliasearch('USM82GJUTB', '5d45df7600b4504a6e6703cb11ea5820');
+//ovde govorimo algolia.com koji index da pretrazuje posto tamo mozemo prebaciti vise tabela,ovde mu govrimo da pretrazuje users
+var index = client.initIndex('users');
+komponentu kacimo u app.blade.php layout i u mounted() cemo napraviti probnu pretragu indexa users koji smo prebacili na algolia.com-
+-po pojmu vlada
+//probno pretrazivanje indexa users na algolia.com, pretrazujemo po pojmu 'vlada'  ako nadje console.log-ovace sta nadje ili error
+index.search('vlada', (err, content) => {
+  console.log(err, content)
+})
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 56 - Social network in Laravel 5.3 and Vuejs 2.0 #56 Realtime searching with vuejs and algolia
+Link - https://www.youtube.com/watch?v=BMhZ0Nuuoy0&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=56
+Sada u Search.vue menjamo stvari i zakomentarisali smo probni poziv algolia.com i pravimo data sekciju u kojoj ce biti varijabla query
+-koju bajndujemo sa text inputom u koji ce user unositi pojam za pretragu 'users' tabele tj indexa users na algolia.com
+takodje ovaj je napravio da mora da se klikne enter da bi pozvao  search() metod koji smo napravili u Search.vue ali ja sam prepravio-
+-da bi bilo skroz dnamicno pa sam napravio watch sekciju u kojoj kazem da ako je query.length > 0 tj user uneo nesto u input da poziva
+-algolia.com
+ovako izgleda kod njega input za pretragu(moj samo nema ovo -  @keyup.enter="search()")
+<input type="text" class="input-sm form-control" placeholder="search for other users" v-model="query" @keyup.enter="search()">
+search() metod iz Search.vue
+//metod kojim pozivamo pretragu 'users' tabele tj indexa users na algolia.com
+search(){
+  //pozivamo algolia.com i kao parametar po kom pretrazuje index users saljemo userov unos u input tj query varijablu
+  index.search(this.query, (err, content) => {
+    console.log(err, content)
+  })
+} 
+moja watch sekcija(ovo nema kod njega)	 
+watch: {
+  query(){
+    if(this.query.length > 0)
+      this.search()
+  }	
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 57 - Social network in Laravel 5.3 and Vuejs 2.0 #57 displaying search results using vuejs
+Link - https://www.youtube.com/watch?v=7b80Io73p_I&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=57
+Sada cemo raditi na prikazu onoga sta nam algolia.com nadje i vrati, u data sekciji u Search.vue pravimo array results [] i u njega -
+-cemo u search() metodu ubacivati rezultate sa algolia.com, ovako sada izgleda search() metod
+search(){
+  //pozivamo algolia.com i kao parametar po kom pretrazuje index users saljemo userov unos u input tj query varijablu
+  index.search(this.query, (err, content) => {
+    //u array results iz data sekcije ubacujemo ono sto nadje algolia.com a to je u hits sekciji objekta koji vraca
+    this.results = content.hits
+  })
+}
+i sada u divu ispod text inputa za pretragu v-if-om iteriramo kroz results array i prikazujemo pronadjene usere
+<div class="row" v-if="results.length">
+  <!--iteriramo kroz users[] u kom su useri koje je nasla alogia.com i prikazujemo ih-->
+  <div class="text-left" v-for="user in results">
+    <a :href="'/profile/' + user.slug" target="blank"><!--ja dodo da bude link-->
+      <img :src="user.avatar" width="40px" height="40px" style="border-radius: 50%;">
+      <span class="text-center">{{ user.name }}</span><br>	
+    </a>
+  </div><hr>
+</div>
+
+//-------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------
+
+Lekcija 58 - Social network in Laravel 5.3 and Vuejs 2.0 #58 formatting search results in a better way
+Link - https://www.youtube.com/watch?v=mzwLaZea7k0&list=PLZAiN3wmUtzV1eI7mAxERQaE2LkyA5Nh6&index=58
+Bilo je nekih problema sa avatarima sa algolie pa smo u .env fajlu prepravili APP_URL=http://localhost u APP_URL=http://socnetwork2.dev
+Takodje u app.blade.php na mestu gde kacimo Search.vue komponentu dodali smo da je kaci samo ako je user ulogovan -
+@if(Auth::check())
+  <search></search>
+@endif
+
+ 
+dodao sam u Search.vue funkcionalnost da se pored usera koje vrati algolia a koji nam nisu prijatelji pojavi AddFriend btn i da se 
+tako mogu dodati prijatelji pogledaj azakomentarisano je, takodje sam dodao da kad user klikne btn AddFriend da bude izbrisan iz DOMa
+-mislim btn ne user, takodje sam koristeci metode traita Friendable.php dodao da nam kad algolia vrati rezultate vadimo 3 array iz -
+-'friendships' tabele znaci array sa id-evima prijatelja, array sa id-evima onih koje smo mi addovali i array sa onima koji su nas-
+-addovali i onda u <template> u zavisnosti od toga da li je  user u nekom od tih array-a prikazujemo ispod userove slike ko-
+-ja se prikazuje ako  ga je algolia vratila odgovarajuci btn ili tekst, ako nije ni u jednom arrayu prikazuje se AddFriend btn koji-
+poziva meto add_friend() u Search.vue koji posle prosledjuje to u add_friend() u traitu friendable.php, ako je  
+-u friendsids arrayu ispisuje se text Friends, ako je u arrayu pendingfriendsrequestsids tj taj user je ulogovanom useru poslao poziv
+-za prijateljstvo prikazuje se btn AcceptFriend koji takodje poziva metod add_friend() u Search.vue koji ce proslediti to add_friend()
+-metodu traita Friendable.php koji po automatizmu ako postoji request od usera a mi ga dodamo prihvata prijateljstvo i na kraju ako -
+-je id usera u arrayu pendingfriendrequestssentids tj ulogovani je njemu poslao poziv za prijateljstvo a ovaj jos nije prihvatio isp-
+-isuje se text WaitingForResponse
+ 
+Dodao sam u Search.vue da algolia.com vraca samo 4 rezultata tako da u FriendshipsControlleru treba napraviti metod koji ce se poziva-
+-ti kad se klikne btn Show More Results koji sam dodao ispod prikaza algolijinih rezultata koji ce vaditi jos usera iz 'users' tabele -
+-po onom poju koji je user uneo u input i to se cuva u query varijabli u Serach.vue
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
